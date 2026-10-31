@@ -1571,6 +1571,26 @@ def refresh_leads():
         except Exception as ex:
             errors.append(str(ex))
 
+    # ── Archive processed lead emails from INBOX ──────────────────────────
+    try:
+        mail.select('INBOX')
+        all_inbox_nums = []
+        for _sender in LEAD_SENDERS:
+            _crit = 'FROM "' + _sender + '" SINCE ' + since
+            _, _d = mail.search(None, _crit)
+            _nums = _d[0].split() if _d[0] else []
+            all_inbox_nums.extend(
+                _n.decode() if isinstance(_n, bytes) else _n
+                for _n in _nums
+            )
+        for _n in all_inbox_nums:
+            mail.store(_n, '+FLAGS', '(\\Seen)')
+            mail.copy(_n, '"' + '[Gmail]/All Mail' + '"')
+            mail.store(_n, '+FLAGS', '(\\Deleted)')
+        if all_inbox_nums:
+            mail.expunge()
+    except Exception as _ae:
+        errors.append('archive: ' + str(_ae))
     mail.logout()
 
     with get_db() as conn:
