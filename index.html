@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Hunt</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --card: #1e2130;
+    --border: #2a2d3d;
+    --text: #e2e8f0;
+    --muted: #7a8499;
+    --accent: #6366f1;
+    --accent-hover: #7c7fff;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    height: 49px;
+  }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header h1 span { color: var(--accent); }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); display: inline-block; margin-right: 6px;
+    transition: background 0.3s;
+  }
+  #status-dot.ok  { background: var(--green); }
+  #status-dot.err { background: var(--red); }
+  #status-label { font-size: 12px; color: var(--muted); }
+
+  /* Page nav */
+  .page-nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 0;
+    padding: 0 20px;
+  }
+  .page-nav-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); padding: 10px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; border-radius: 0;
+  }
+  .page-nav-btn:hover { color: var(--text); background: none; }
+  .page-nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Optimize view */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    min-height: calc(100vh - 82px);
+  }
+  .main-col {
+    padding: 20px;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 16px;
+    min-width: 0;
+  }
+  .sidebar {
+    padding: 16px 14px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .card-title-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  select, textarea, input[type="text"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; font-family: inherit; width: 100%;
+    transition: border-color 0.15s;
+  }
+  select:focus, textarea:focus, input[type="text"]:focus {
+    outline: none; border-color: var(--accent);
+  }
+  textarea { resize: vertical; line-height: 1.5; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 6px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  button:hover { background: var(--accent-hover); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  button.secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
+  button.sm { padding: 5px 10px; font-size: 11px; font-weight: 600; }
+  button.danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+  button.danger:hover { background: rgba(239,68,68,0.25); }
+  #optimize-btn { width: 100%; padding: 11px; font-size: 14px; }
+  #spinner {
+    display: none; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #output-text {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px;
+    font-family: 'SF Mono','Cascadia Code','Consolas',monospace;
+    font-size: 12px; line-height: 1.7;
+    white-space: pre-wrap; word-break: break-word;
+    min-height: 80px; color: var(--text);
+  }
+  #output-text.placeholder { color: var(--muted); font-family: inherit; font-style: italic; }
+  .output-actions { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .copy-flash { font-size: 12px; color: var(--green); opacity: 0; transition: opacity 0.3s; }
+  .copy-flash.show { opacity: 1; }
+  .tabs { display: flex; gap: 2px; margin-bottom: 12px; }
+  .tab-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 5px 5px 0 0;
+    padding: 6px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn.active {
+    background: var(--card); border-bottom-color: var(--card);
+    color: var(--text); border-top: 2px solid var(--accent);
+  }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Cover letter */
+  #cl-btn {
+    width: 100%; padding: 11px; font-size: 14px; margin-bottom: 16px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    letter-spacing: 0.02em;
+  }
+  #cl-btn:hover { background: linear-gradient(135deg, #7c7fff 0%, #a78bfa 100%); }
+  #cl-output-wrap {
+    background: linear-gradient(180deg, #1a1d2e 0%, #1e2130 100%);
+    border: 1px solid #3a3d5c; border-radius: 8px;
+    padding: 24px 28px; min-height: 120px; position: relative;
+  }
+  #cl-output-wrap::before {
+    content: ''; position: absolute; top: 0; left: 28px; right: 28px; height: 1px;
+    background: linear-gradient(90deg, transparent, #6366f1 40%, #8b5cf6 60%, transparent);
+    opacity: 0.5;
+  }
+  #cl-output-text {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 13.5px; line-height: 1.85;
+    color: var(--text); white-space: pre-wrap; word-break: break-word;
+  }
+  .cl-placeholder {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+    font-style: italic; color: var(--muted) !important;
+    font-size: 13px !important; line-height: 1.5 !important;
+  }
+  .cl-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .log-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: flex-end; }
+  .log-table-wrap { overflow-x: auto; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    text-align: left; color: var(--muted); font-weight: 600;
+    padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 7px 8px; border-bottom: 1px solid rgba(42,45,61,0.5); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface); }
+
+  /* Status badges */
+  .status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    cursor: pointer; user-select: none; transition: opacity 0.15s;
+  }
+  .status-badge:hover { opacity: 0.8; }
+  .status-applied      { background: rgba(99,102,241,0.2);  color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .status-queued       { background: rgba(99,102,241,0.1);  color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
+  .status-declined     { background: rgba(239,68,68,0.2);   color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+  .status-interview    { background: rgba(34,197,94,0.2);   color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+  .status-assessment   { background: rgba(245,158,11,0.2);  color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+  .status-info_requested { background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+  .status-offer        { background: rgba(16,185,129,0.2);  color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .status-ghosted      { background: rgba(122,132,153,0.15); color: var(--muted); border: 1px solid var(--border); }
+
+  .jd-saved-indicator {
+    font-size: 11px; color: var(--green);
+    display: none; align-items: center; gap: 4px; margin-top: 6px;
+  }
+  .jd-saved-indicator.show { display: flex; }
+
+  .score-widget {
+    margin-top: 8px; padding: 10px 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; display: none;
+  }
+  .score-widget.show { display: block; }
+  .score-num { font-size: 26px; font-weight: 700; line-height: 1; display: inline-block; }
+  .score-num.low  { color: #f87171; }
+  .score-num.mid  { color: #fbbf24; }
+  .score-num.high { color: #4ade80; }
+  .score-bar-track { height: 4px; background: var(--border); border-radius: 2px; margin: 6px 0 4px; }
+  .score-bar-fill { height: 4px; border-radius: 2px; transition: width 0.3s; }
+  .score-bar-fill.low  { background: #f87171; }
+  .score-bar-fill.mid  { background: #fbbf24; }
+  .score-bar-fill.high { background: #4ade80; }
+  .score-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .score-chip {
+    font-size: 10px; padding: 2px 6px; border-radius: 3px;
+    background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2);
+  }
+  .sync-result { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 18px; }
+  .sync-result.ok  { color: var(--green); }
+  .sync-result.err { color: var(--red); }
+  .sidebar-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .search-link {
+    display: block; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 5px;
+    padding: 6px 9px; color: var(--text); text-decoration: none;
+    font-size: 12px; line-height: 1.4; transition: border-color 0.15s, color 0.15s;
+  }
+  .search-link:hover { border-color: var(--accent); color: var(--accent); }
+  .sl-board {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); display: block; margin-bottom: 1px;
+  }
+  .search-link:hover .sl-board { color: var(--accent-hover); }
+  .job-card {
+    display: block; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; color: var(--text); text-decoration: none;
+    font-size: 12px; line-height: 1.4; transition: border-color 0.15s;
+  }
+  .job-card:hover { border-color: var(--accent); }
+  .job-card-title { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+  .job-card-company { color: var(--muted); font-size: 11px; }
+  .job-card-meta { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+  .job-tag {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 1px 5px; border-radius: 3px;
+    background: rgba(99,102,241,0.15); color: var(--accent);
+  }
+  .job-tag.salary { background: rgba(34,197,94,0.12); color: var(--green); }
+  .job-tag.loc { background: rgba(122,132,153,0.12); color: var(--muted); font-weight: 400; text-transform: none; }
+  #jobs-status { font-size: 11px; color: var(--muted); min-height: 14px; }
+  #refresh-jobs { background: none; border: none; color: var(--accent); font-size: 11px; cursor: pointer; padding: 0; }
+  #refresh-jobs:hover { color: var(--accent-hover); }
+
+  /* Discover view */
+  #view-discover {
+    padding: 20px;
+    min-height: calc(100vh - 82px);
+  }
+  .disc-toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+  }
+  .disc-toolbar label { margin-bottom: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .disc-toolbar select { width: auto; padding: 6px 8px; font-size: 12px; }
+  #disc-refresh-btn { padding: 7px 14px; font-size: 12px; }
+  #disc-status { font-size: 12px; color: var(--muted); flex: 1; }
+  #disc-hidden-count { font-size: 11px; color: var(--muted); }
+  .disc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 10px;
+  }
+  .disc-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; display: flex; gap: 12px; align-items: flex-start;
+    transition: border-color 0.15s;
+  }
+  .disc-card:hover { border-color: rgba(99,102,241,0.4); }
+  .disc-score-circle {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; line-height: 1;
+  }
+  .disc-score-circle.high { background: rgba(34,197,94,0.12); color: #4ade80; border: 2px solid rgba(34,197,94,0.3); }
+  .disc-score-circle.mid  { background: rgba(234,179,8,0.12);  color: #fbbf24; border: 2px solid rgba(234,179,8,0.3); }
+  .disc-score-circle.low  { background: rgba(239,68,68,0.12);  color: #f87171; border: 2px solid rgba(239,68,68,0.3); }
+  .disc-body { flex: 1; min-width: 0; }
+  .disc-title {
+    font-size: 13px; font-weight: 600; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .disc-title a { color: var(--text); text-decoration: none; }
+  .disc-title a:hover { color: var(--accent); }
+  .disc-company { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .disc-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+  .disc-missing {
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .disc-missing-chip {
+    font-size: 10px; padding: 1px 5px; border-radius: 3px;
+    background: rgba(239,68,68,0.08); color: #fca5a5; border: 1px solid rgba(239,68,68,0.15);
+  }
+  .disc-actions { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+  .disc-empty {
+    grid-column: 1/-1; text-align: center; padding: 60px 20px;
+    color: var(--muted); font-size: 14px;
+  }
+  .disc-spinner {
+    display: none; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto;
+  }
+
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+    .log-row { grid-template-columns: 1fr 1fr; }
+    .disc-grid { grid-template-columns: 1fr; }
+  }
+  /* Daily Checklist */
+  .checklist-grid { display: flex; flex-direction: column; gap: 16px; max-width: 820px; margin: 0 auto; padding: 20px 0 40px; }
+  .cl-platform { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .cl-platform-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .cl-platform-logo { width: 22px; height: 22px; border-radius: 4px; font-size: 15px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent); }
+  .cl-platform-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .cl-platform-url { font-size: 11px; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .cl-platform-url:hover { text-decoration: underline; }
+  .cl-warning { background: rgba(251,146,60,.08); border: 1px solid rgba(251,146,60,.35); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #fb923c; display: flex; gap: 8px; }
+  .cl-warning-icon { flex-shrink: 0; }
+  .cl-tasks { display: flex; flex-direction: column; gap: 8px; }
+  .cl-task { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: background .15s; }
+  .cl-task:hover { background: rgba(255,255,255,.04); }
+  .cl-task input[type=checkbox] { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; accent-color: var(--accent); cursor: pointer; }
+  .cl-task-label { font-size: 13px; color: var(--text); line-height: 1.45; user-select: none; }
+  .cl-task.done .cl-task-label { color: var(--muted); text-decoration: line-through; }
+  .cl-reset-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .cl-reset-row span { font-size: 12px; color: var(--muted); }
+  .cl-reset-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 5px 12px; font-size: 12px; cursor: pointer; transition: color .15s, border-color .15s; }
+  .cl-reset-btn:hover { color: var(--text); border-color: var(--text); }
+  .cl-progress { font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .cl-platform-progress { font-size: 11px; color: var(--muted); margin-right: 8px; }
+  .cl-search-terms { font-size: 10px; color: var(--muted); background: rgba(255,255,255,.06); border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; margin-left: auto; }
+
+
+  /* ── Leads tab ───────────────────────────────────────────────────────── */
+  .leads-wrap { max-width: 860px; margin: 0 auto; padding: 20px 0 40px; }
+  .leads-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .leads-header-meta { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; }
+  .leads-refresh-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+  }
+  .leads-refresh-btn:hover { opacity: .85; }
+  .leads-refresh-btn:disabled { opacity: .5; cursor: default; }
+
+  .leads-status-bar {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .ls-tab {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+    color: var(--muted); transition: all .15s;
+  }
+  .ls-tab:hover { color: var(--text); border-color: var(--muted); }
+  .ls-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(99,102,241,.1); }
+  .ls-tab .ls-count { font-weight: 400; font-size: 11px; opacity: .8; margin-left: 4px; }
+
+  .lead-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .lead-score-badge {
+    flex-shrink: 0; width: 42px; height: 42px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+  .lead-score-badge.hi { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.4); color: #22c55e; }
+  .lead-score-badge.med { background: rgba(234,179,8,.1); border-color: rgba(234,179,8,.35); color: #eab308; }
+
+  .lead-body { flex: 1; min-width: 0; }
+  .lead-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+  .lead-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .lead-source-chip {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .lead-meta { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .lead-salary { color: var(--green); font-weight: 600; }
+  .lead-workplace-chip {
+    display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 8px; margin-left: 6px;
+    border: 1px solid var(--border); color: var(--muted); vertical-align: middle;
+  }
+  .lead-workplace-chip.remote { border-color: rgba(99,102,241,.5); color: var(--accent); }
+  .lead-workplace-chip.phoenix_remote { border-color: rgba(99,102,241,.3); color: var(--accent); opacity: .75; }
+  .lead-posted { font-size: 11px; color: var(--muted); }
+  .lead-posted.stale { text-decoration: line-through; opacity: .6; }
+  .lead-reason { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 4px; font-style: italic; }
+  .lead-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .la-btn {
+    font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    transition: all .15s;
+  }
+  .la-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .la-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .la-btn.primary:hover { opacity: .85; }
+  .la-btn.muted { color: var(--muted); }
+  .la-btn.muted:hover { color: var(--red); border-color: var(--red); }
+
+  .leads-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+
+  /* Blacklist panel */
+  .bl-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-top: 24px; }
+  .bl-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+  .bl-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; min-height: 24px; }
+  .bl-chip {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 3px 10px; font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 5px;
+  }
+  .bl-chip-remove { cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; }
+  .bl-chip-remove:hover { color: var(--red); }
+  .bl-add-row { display: flex; gap: 8px; }
+  .bl-input {
+    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; color: var(--text); font-size: 12px; outline: none;
+  }
+  .bl-input:focus { border-color: var(--accent); }
+  .bl-add-btn {
+    background: var(--accent); border: none; border-radius: 6px; color: #fff;
+    padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .bl-add-btn:hover { opacity: .85; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Job <span>Hunt</span></h1>
+  <div>
+    <span id="status-dot"></span>
+    <span id="status-label">checking&hellip;</span>
+  </div>
+</header>
+
+<nav class="page-nav">
+  <button class="page-nav-btn active" onclick="switchView('optimize', this)">Optimize</button>
+  <button class="page-nav-btn" onclick="switchView('discover', this)">Discover</button>
+  <button class="page-nav-btn" onclick="switchView('checklist', this)">Checklist</button>
+  <button class="page-nav-btn" onclick="switchView('leads', this)">Leads</button>
+</nav>
+
+<!-- OPTIMIZE VIEW -->
+<div id="view-optimize" class="view active">
+<div class="layout">
+  <div class="main-col">
+
+    <div class="card">
+      <div class="card-title">Resume Optimizer</div>
+      <div style="margin-bottom:12px">
+        <label for="ats-select">Target ATS</label>
+        <select id="ats-select">
+          <option value="">— Select ATS —</option>
+          <optgroup label="Legacy (ASCII only)">
+            <option>BrassRing</option>
+            <option>iCIMS</option>
+            <option>SuccessFactors</option>
+            <option>Taleo</option>
+            <option>UKG</option>
+          </optgroup>
+          <optgroup label="Standard">
+            <option>BambooHR</option>
+            <option>Jobvite</option>
+            <option>Rippling</option>
+            <option>SmartRecruiters</option>
+            <option>Workable</option>
+            <option>Workday</option>
+          </optgroup>
+          <optgroup label="Modern">
+            <option>Ashby</option>
+            <option>Greenhouse</option>
+            <option>JazzHR</option>
+            <option>Lever</option>
+            <option>Direct Contact</option>
+          </optgroup>
+          <optgroup label="Easy Apply">
+            <option>LinkedIn Easy Apply</option>
+            <option>Indeed Easy Apply</option>
+            <option>Dice Easy Apply</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="two-col">
+        <div>
+          <label for="jd-input">Job Description</label>
+          <textarea id="jd-input" rows="14" placeholder="Paste the full job description here&hellip;"></textarea>
+          <div id="score-widget" class="score-widget">
+            <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
+              <span id="score-before" style="display:none;font-size:18px;font-weight:700;color:var(--muted)"></span>
+              <span id="score-arrow" style="display:none;font-size:13px;color:var(--muted)">→</span>
+              <span id="score-num" class="score-num low">—</span>
+              <span id="score-delta" style="display:none;font-size:12px;font-weight:700;align-self:center"></span>
+              <span style="font-size:12px;color:var(--muted)">/100 match</span>
+            </div>
+            <div class="score-bar-track"><div id="score-bar" class="score-bar-fill low" style="width:0%"></div></div>
+            <div id="score-summary" style="font-size:11px;color:var(--muted);margin-bottom:2px"></div>
+            <div id="score-chips" class="score-chips"></div>
+          </div>
+        </div>
+        <div>
+          <label for="resume-input">Your Resume</label>
+          <textarea id="resume-input" rows="14" placeholder="Your resume will be pre-loaded&hellip;"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <button id="optimize-btn" onclick="runOptimize()">
+          <span id="btn-label">Optimize &amp; Download</span>
+          <div id="spinner"></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button id="tab-btn-resume" class="tab-btn active" onclick="switchTab('resume', this)">Optimized Resume</button>
+        <button id="tab-btn-coverletter" class="tab-btn" onclick="switchTab('coverletter', this)">Cover Letter</button>
+      </div>
+
+      <div id="tab-resume" class="tab-pane active">
+        <div id="output-text" class="placeholder">Optimized resume will appear here after you click Optimize &amp; Download.</div>
+        <div class="output-actions">
+          <button class="secondary" onclick="copyOutput()">Copy</button>
+          <button class="secondary" onclick="downloadDocx()">Re-download .docx</button>
+          <span class="copy-flash" id="copy-flash">Copied!</span>
+        </div>
+      </div>
+
+      <div id="tab-coverletter" class="tab-pane">
+        <button id="cl-btn" onclick="runCoverLetter()">
+          <span id="cl-btn-label">✦ Generate Cover Letter</span>
+          <div id="cl-spinner" style="display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto"></div>
+        </button>
+        <div id="cl-output-wrap">
+          <div id="cl-output-text" class="cl-placeholder">Cover letter will appear here — paste a JD and hit Generate.</div>
+        </div>
+        <div class="cl-actions">
+          <button class="secondary" onclick="copyCL()">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px;margin-right:5px"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/></svg>Copy
+          </button>
+          <button class="secondary" onclick="downloadCLDocx()">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px;margin-right:5px"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>Download .docx
+          </button>
+          <span class="copy-flash" id="cl-copy-flash">Copied!</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Log Application</div>
+      <div class="log-row">
+        <div>
+          <label for="log-company">Company</label>
+          <input type="text" id="log-company" placeholder="Acme Corp">
+        </div>
+        <div>
+          <label for="log-role">Role</label>
+          <input type="text" id="log-role" placeholder="Cloud Security Engineer">
+        </div>
+        <div>
+          <label for="log-source">Source</label>
+          <select id="log-source">
+            <option>LinkedIn</option>
+            <option>Indeed</option>
+            <option>Dice</option>
+            <option>USAJobs</option>
+            <option>ZipRecruiter</option>
+            <option>Company Site</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <button onclick="logApplication()">Log</button>
+      </div>
+      <div class="jd-saved-indicator" id="jd-saved-indicator">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+        Job description will be saved with this log entry
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <div>
+          <span class="card-title" style="margin-bottom:0">Application Log</span>
+          <span id="app-count" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px"></span>
+        </div>
+        <button class="secondary sm" id="sync-btn" onclick="syncGmail()">
+          <span id="sync-label">Sync Gmail</span>
+          <div id="sync-spinner" style="display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto"></div>
+        </button>
+      </div>
+      <div class="sync-result" id="sync-result"></div>
+      <div class="log-table-wrap">
+        <table>
+          <thead><tr>
+            <th>Date</th><th>Company</th><th>Role</th><th>ATS</th><th>Source</th><th>Status</th>
+          </tr></thead>
+          <tbody id="log-body">
+            <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">No applications logged yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sidebar">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="sidebar-title" style="margin-bottom:0">Live Matches</div>
+      <button id="refresh-jobs" onclick="loadJobs()">↻ refresh</button>
+    </div>
+    <div id="jobs-status">Loading&hellip;</div>
+    <div id="job-list" style="display:flex;flex-direction:column;gap:6px"></div>
+
+    <div class="sidebar-title" style="margin-top:10px">Search Strings</div>
+
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Microsoft%20Sentinel&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
+      <span class="sl-board">LinkedIn</span>Microsoft Sentinel — US Remote/Hybrid
+    </a>
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Azure%20Security%20Engineer&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
+      <span class="sl-board">LinkedIn</span>Azure Security Engineer — US Remote/Hybrid
+    </a>
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Cloud%20Security%20Engineer&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
+      <span class="sl-board">LinkedIn</span>Cloud Security Engineer — US Remote/Hybrid
+    </a>
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Defender%20for%20Cloud&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
+      <span class="sl-board">LinkedIn</span>Defender for Cloud — US Remote/Hybrid
+    </a>
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Entra%20ID%20Security&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
+      <span class="sl-board">LinkedIn</span>Entra ID Security — US Remote/Hybrid
+    </a>
+    <a class="search-link" href="https://www.indeed.com/jobs?q=%22Microsoft+Sentinel%22+%22Azure%22&l=Phoenix%2C+AZ&sc=0kf%3Aattr%28DSQF7%29%3B" target="_blank">
+      <span class="sl-board">Indeed</span>Microsoft Sentinel Azure — Phoenix (Remote OK)
+    </a>
+    <a class="search-link" href="https://www.indeed.com/jobs?q=%22cloud+security%22+%22Defender+for+Cloud%22&l=Remote" target="_blank">
+      <span class="sl-board">Indeed</span>Cloud Security + Defender for Cloud — Remote
+    </a>
+    <a class="search-link" href="https://www.indeed.com/jobs?q=%22SIEM%22+%22threat+hunting%22+%22Azure%22&l=Remote&sc=0kf%3Aattr%28DSQF7%29%3B" target="_blank">
+      <span class="sl-board">Indeed</span>SIEM + Threat Hunting Azure — Remote
+    </a>
+    <a class="search-link" href="https://www.dice.com/jobs?q=Microsoft+Sentinel+Azure+Security&location=Phoenix%2C+AZ&radius=50&telecommute=true" target="_blank">
+      <span class="sl-board">Dice</span>Sentinel Azure Security — Phoenix + Remote
+    </a>
+    <a class="search-link" href="https://www.dice.com/jobs?q=%22Defender+for+Cloud%22+%22KQL%22&telecommute=true" target="_blank">
+      <span class="sl-board">Dice</span>Defender for Cloud KQL — Remote
+    </a>
+    <a class="search-link" href="https://www.dice.com/jobs?q=cloud+security+engineer+azure+%22Entra+ID%22&telecommute=true" target="_blank">
+      <span class="sl-board">Dice</span>Cloud Security Engineer Azure Entra ID — Remote
+    </a>
+    <a class="search-link" href="https://www.usajobs.gov/Search/Results?k=azure+cloud+security&l=&hp=public&p=1" target="_blank">
+      <span class="sl-board">USAJobs</span>Azure Cloud Security — Public Trust OK
+    </a>
+    <a class="search-link" href="https://www.usajobs.gov/Search/Results?k=microsoft+sentinel+SIEM&l=&hp=public&p=1" target="_blank">
+      <span class="sl-board">USAJobs</span>Microsoft Sentinel SIEM — Federal Remote
+    </a>
+    <a class="search-link" href="https://www.usajobs.gov/Search/Results?k=cybersecurity+cloud+%22public+trust%22&l=&p=1" target="_blank">
+      <span class="sl-board">USAJobs</span>Cybersecurity Cloud Public Trust — Nationwide
+    </a>
+    <a class="search-link" href="https://www.ziprecruiter.com/Jobs/Azure-Security-Engineer/-in-Phoenix,AZ" target="_blank">
+      <span class="sl-board">ZipRecruiter</span>Azure Security Engineer — Phoenix AZ
+    </a>
+    <a class="search-link" href="https://www.ziprecruiter.com/Jobs/Cloud-Security-Engineer/--in-Remote" target="_blank">
+      <span class="sl-board">ZipRecruiter</span>Cloud Security Engineer — Remote US
+    </a>
+    <a class="search-link" href="https://www.ziprecruiter.com/Jobs/Microsoft-Sentinel/--in-Remote" target="_blank">
+      <span class="sl-board">ZipRecruiter</span>Microsoft Sentinel — Remote
+    </a>
+    <a class="search-link" href="https://remotive.com/remote-jobs/security?search=azure" target="_blank">
+      <span class="sl-board">Remotive</span>Azure Security — Remote
+    </a>
+    <a class="search-link" href="https://jobicy.com/jobs?q=azure+security&remote=1" target="_blank">
+      <span class="sl-board">Jobicy</span>Azure Security — Remote
+    </a>
+  </div>
+</div>
+</div>
+
+<!-- DISCOVER VIEW -->
+<div id="view-discover" class="view">
+  <div class="disc-toolbar">
+    <label>Min score:
+      <select id="disc-min-score" onchange="renderDiscover()">
+        <option value="0">All</option>
+        <option value="25" selected>25+</option>
+        <option value="50">50+</option>
+        <option value="70">70+</option>
+      </select>
+    </label>
+    <label>Source:
+      <select id="disc-source" onchange="renderDiscover()">
+        <option value="">All sources</option>
+        <option>Adzuna</option>
+        <option>Remotive</option>
+        <option>Jobicy</option>
+        <option>The Muse</option>
+        <option>Arbeitnow</option>
+        <option>USAJobs</option>
+      </select>
+    </label>
+    <button id="disc-refresh-btn" onclick="loadDiscover()">
+      <span id="disc-refresh-label">↻ Scan All Sources</span>
+      <div id="disc-spinner" class="disc-spinner"></div>
+    </button>
+    <span id="disc-status">Click "Scan All Sources" to fetch jobs from 6 boards.</span>
+    <span id="disc-hidden-count"></span>
+  </div>
+  <div id="disc-grid" class="disc-grid">
+    <div class="disc-empty">Hit <strong>Scan All Sources</strong> to pull from Adzuna, Remotive, Jobicy, The Muse, Arbeitnow, and USAJobs — pre-scored against your resume.</div>
+  </div>
+</div>
+
+<!-- CHECKLIST VIEW -->
+<div id="view-checklist" class="view">
+<div class="checklist-grid">
+
+  <div class="cl-reset-row">
+    <span id="cl-date-label">Loading&hellip;</span>
+    <span id="cl-overall-progress" class="cl-progress"></span>
+    <button class="cl-reset-btn" onclick="clResetAll()">Reset all</button>
+  </div>
+
+  <!-- LinkedIn -->
+  <div class="cl-platform" id="clp-linkedin">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">in</span>
+      <span class="cl-platform-name">LinkedIn</span>
+      <span id="cl-prog-linkedin" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">azure sentinel "information security" · remote · recent</span>
+      <a class="cl-platform-url" href="https://www.linkedin.com/jobs/search/?keywords=azure+sentinel+%22information+security%22&f_WT=2&sortBy=DD" target="_blank">Search &nearr;</a>
+    </div>
+    <div class="cl-warning"><span class="cl-warning-icon">&#9888;</span><span>Connection request limit ~20/day. No automation tools &mdash; account restrictions roll out without warning.</span></div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="linkedin" data-key="messages"><input type="checkbox"> <span class="cl-task-label">Check messages &amp; connection requests</span></label>
+      <label class="cl-task" data-platform="linkedin" data-key="alerts"><input type="checkbox"> <span class="cl-task-label">Review job alerts in notifications</span></label>
+      <label class="cl-task" data-platform="linkedin" data-key="easy-apply"><input type="checkbox"> <span class="cl-task-label">Apply to 3&ndash;5 Easy Apply roles (quality over volume)</span></label>
+      <label class="cl-task" data-platform="linkedin" data-key="engage"><input type="checkbox"> <span class="cl-task-label">Like or comment on 1 relevant post (boosts algorithmic visibility)</span></label>
+      <label class="cl-task" data-platform="linkedin" data-key="profile-view"><input type="checkbox"> <span class="cl-task-label">Check &ldquo;Who viewed your profile&rdquo; &mdash; follow up with any recruiters</span></label>
+      <label class="cl-task" data-platform="linkedin" data-key="connections"><input type="checkbox"> <span class="cl-task-label">Send 1&ndash;3 targeted connection requests (hiring managers / recruiters at target companies)</span></label>
+      <label class="cl-task" data-platform="linkedin" data-key="open-to"><input type="checkbox"> <span class="cl-task-label">Confirm &ldquo;Open To Work&rdquo; is still active and current</span></label>
+    </div>
+  </div>
+
+  <!-- Indeed -->
+  <div class="cl-platform" id="clp-indeed">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">In</span>
+      <span class="cl-platform-name">Indeed</span>
+      <span id="cl-prog-indeed" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">azure sentinel cybersecurity · remote · date</span>
+      <a class="cl-platform-url" href="https://www.indeed.com/jobs?q=azure+sentinel+cybersecurity&sc=0kf%3Aattr(DSQF7)%3B&sort=date" target="_blank">Search &nearr;</a>
+    </div>
+    <div class="cl-warning"><span class="cl-warning-icon">&#9888;</span><span>Bot detection is aggressive. Manual applies only &mdash; no third-party apply tools. Mass-applying the same cover letter triggers shadow-filtering on your account.</span></div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="indeed" data-key="alerts"><input type="checkbox"> <span class="cl-task-label">Check job alert emails / saved searches for new postings</span></label>
+      <label class="cl-task" data-platform="indeed" data-key="apply"><input type="checkbox"> <span class="cl-task-label">Apply to 2&ndash;4 new roles (ensure Indeed Resume is current)</span></label>
+      <label class="cl-task" data-platform="indeed" data-key="messages"><input type="checkbox"> <span class="cl-task-label">Check Indeed Messages for employer responses</span></label>
+      <label class="cl-task" data-platform="indeed" data-key="resume-refresh"><input type="checkbox"> <span class="cl-task-label">Refresh resume visibility (open Resume, save a minor edit &mdash; bumps recency)</span></label>
+      <label class="cl-task" data-platform="indeed" data-key="assessments"><input type="checkbox"> <span class="cl-task-label">Complete any pending Indeed Assessments (improves ranking)</span></label>
+    </div>
+  </div>
+
+  <!-- Dice -->
+  <div class="cl-platform" id="clp-dice">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">D</span>
+      <span class="cl-platform-name">Dice</span>
+      <span id="cl-prog-dice" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">azure sentinel cybersecurity · remote · last 7 days</span>
+      <a class="cl-platform-url" href="https://www.dice.com/jobs?q=azure+sentinel+cybersecurity&location=Remote&filters.postedDate=ONE_WEEK" target="_blank">Search &nearr;</a>
+    </div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="dice" data-key="alerts"><input type="checkbox"> <span class="cl-task-label">Check job alerts and &ldquo;Jobs for you&rdquo; recommendations</span></label>
+      <label class="cl-task" data-platform="dice" data-key="apply"><input type="checkbox"> <span class="cl-task-label">Apply to 2&ndash;3 relevant security / cloud roles</span></label>
+      <label class="cl-task" data-platform="dice" data-key="profile"><input type="checkbox"> <span class="cl-task-label">Verify profile skills are current (Azure, Sentinel, SIEM, etc.)</span></label>
+      <label class="cl-task" data-platform="dice" data-key="recruiter"><input type="checkbox"> <span class="cl-task-label">Respond to any recruiter outreach in Dice inbox</span></label>
+    </div>
+  </div>
+
+  <!-- USAJobs -->
+  <div class="cl-platform" id="clp-usajobs">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">US</span>
+      <span class="cl-platform-name">USAJobs</span>
+      <span id="cl-prog-usajobs" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">cybersecurity azure sentinel</span>
+      <a class="cl-platform-url" href="https://www.usajobs.gov/Search/Results?k=cybersecurity+azure+sentinel&p=1" target="_blank">Search &nearr;</a>
+    </div>
+    <div class="cl-warning"><span class="cl-warning-icon">&#8505;</span><span>Block 45&ndash;90 min per serious application. Closing dates are hard cutoffs &mdash; closed is closed, no extensions.</span></div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="usajobs" data-key="saved"><input type="checkbox"> <span class="cl-task-label">Review saved jobs &mdash; flag any closing within 5 days</span></label>
+      <label class="cl-task" data-platform="usajobs" data-key="search"><input type="checkbox"> <span class="cl-task-label">Run fresh search: &ldquo;Information Security&rdquo; / &ldquo;Cybersecurity&rdquo; / &ldquo;Azure&rdquo; &mdash; sort by closing date</span></label>
+      <label class="cl-task" data-platform="usajobs" data-key="apply"><input type="checkbox"> <span class="cl-task-label">Submit or continue one federal application (resume builder + questionnaire)</span></label>
+      <label class="cl-task" data-platform="usajobs" data-key="status"><input type="checkbox"> <span class="cl-task-label">Check application status on open submissions</span></label>
+      <label class="cl-task" data-platform="usajobs" data-key="documents"><input type="checkbox"> <span class="cl-task-label">Confirm supporting docs (transcripts, certs) are uploaded and current</span></label>
+    </div>
+  </div>
+
+  <!-- Glassdoor -->
+  <div class="cl-platform" id="clp-glassdoor">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">G</span>
+      <span class="cl-platform-name">Glassdoor</span>
+      <span id="cl-prog-glassdoor" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">azure sentinel cybersecurity · remote · last 14 days</span>
+      <a class="cl-platform-url" href="https://www.glassdoor.com/Job/jobs.htm?sc.keyword=azure+sentinel+cybersecurity&remoteWorkType=1&fromAge=14" target="_blank">Search &nearr;</a>
+    </div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="glassdoor" data-key="alerts"><input type="checkbox"> <span class="cl-task-label">Check job alerts for new matches</span></label>
+      <label class="cl-task" data-platform="glassdoor" data-key="research"><input type="checkbox"> <span class="cl-task-label">Research 1 target company (reviews, interview Q&amp;As, salary data)</span></label>
+      <label class="cl-task" data-platform="glassdoor" data-key="apply"><input type="checkbox"> <span class="cl-task-label">Apply to any new high-fit postings</span></label>
+    </div>
+  </div>
+
+  <!-- ZipRecruiter -->
+  <div class="cl-platform" id="clp-ziprecruiter">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">Z</span>
+      <span class="cl-platform-name">ZipRecruiter</span>
+      <span id="cl-prog-ziprecruiter" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">azure sentinel cybersecurity · remote</span>
+      <a class="cl-platform-url" href="https://www.ziprecruiter.com/candidate/search?search=azure+sentinel+cybersecurity&location=Remote" target="_blank">Search &nearr;</a>
+    </div>
+    <div class="cl-warning"><span class="cl-warning-icon">&#9888;</span><span>ZipRecruiter syndicates widely &mdash; check the employer name before each apply to avoid duplicate submissions.</span></div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="ziprecruiter" data-key="matches"><input type="checkbox"> <span class="cl-task-label">Review &ldquo;Recommended Jobs&rdquo; matches in email / app</span></label>
+      <label class="cl-task" data-platform="ziprecruiter" data-key="1-click"><input type="checkbox"> <span class="cl-task-label">Use 1-Click Apply for 2&ndash;3 screened roles</span></label>
+      <label class="cl-task" data-platform="ziprecruiter" data-key="status"><input type="checkbox"> <span class="cl-task-label">Check application status board for employer views</span></label>
+    </div>
+  </div>
+
+  <!-- Direct / Company Sites -->
+  <div class="cl-platform" id="clp-direct">
+    <div class="cl-platform-header">
+      <span class="cl-platform-logo">&#127962;</span>
+      <span class="cl-platform-name">Direct / Company Sites</span>
+      <span id="cl-prog-direct" class="cl-platform-progress"></span>
+      <span class="cl-search-terms">target employers + clearance boards</span>
+      <a class="cl-platform-url" href="https://www.clearancejobs.com/jobs?keywords=azure+cybersecurity+sentinel&remote=1" target="_blank">ClearanceJobs &nearr;</a>
+    </div>
+    <div class="cl-tasks">
+      <label class="cl-task" data-platform="direct" data-key="target-check"><input type="checkbox"> <span class="cl-task-label">Check careers pages for 3 target employers (Microsoft, Leidos, SAIC, Peraton, Parsons, etc.)</span></label>
+      <label class="cl-task" data-platform="direct" data-key="clearance"><input type="checkbox"> <span class="cl-task-label">Check ClearanceJobs.com for new TS/SCI-eligible security roles</span></label>
+      <label class="cl-task" data-platform="direct" data-key="referral"><input type="checkbox"> <span class="cl-task-label">Reach out to 1 contact at a target company for a warm referral or info</span></label>
+      <label class="cl-task" data-platform="direct" data-key="followup"><input type="checkbox"> <span class="cl-task-label">Follow up on any application &gt;5 days old with no status update</span></label>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+<script>
+const RESUME = `JAMIE LORING
+623-297-8499 | jamie@jamieloring.com | Glendale, AZ
+
+PROFESSIONAL SUMMARY
+Senior cybersecurity engineer with 8+ years of experience specializing in offensive security, vulnerability management, and cloud defense. Builds and operates penetration testing frameworks, performs external attack surface management (EASM), and translates findings into developer-ready remediation. Operates Microsoft Sentinel SIEM, Defender for Cloud, and Entra ID at enterprise scale. CompTIA SecurityX (CASP+) certified; DoD Public Trust clearance active.
+
+OFFENSIVE SECURITY & PROJECTS
+- ShellShock: custom Parrot OS-based pentesting framework for network enumeration, exploitation, and post-exploitation automation
+- EASM: built tooling for continuous external asset discovery, subdomain enumeration, and exposure tracking across client environments
+- HackTheBox: global top 1% ranking across Active Directory, web exploitation, privilege escalation, and red team challenges
+- LLM Automation: developed Python/Claude-based agents for automated security research, threat intelligence enrichment, and workflow automation
+- Python scripting: security tooling, API integrations, log parsing, and operational automation across multiple roles
+
+EXPERIENCE
+
+Cloud & Threat Security Engineer | Troon | Jun 2026 - Oct 2026
+- Designed and maintained Microsoft Sentinel SIEM with custom KQL detection rules, threat hunting playbooks, and automated incident response
+- Managed Defender for Cloud security posture, Entra ID identity protection, and Azure Policy / CSPM across enterprise environment
+- Developed Python automation for security operations workflows and LLM-assisted threat intelligence enrichment
+- Collaborated with developers via Azure DevOps to triage, prioritize, and track vulnerability remediation to closure
+
+Azure Security Engineer | Arrivia | Jul 2025 - Jun 2026
+- Implemented Microsoft Sentinel log ingestion pipelines, analytics rules, and SOAR playbooks for cloud environment
+- Managed Entra ID conditional access policies, MFA enforcement, and identity security posture
+- Conducted threat hunting using KQL and MITRE ATT&CK framework; reduced false-positive alert volume through detection tuning
+- Performed internal vulnerability assessments and coordinated with engineering teams via GitHub for remediation tracking
+
+Azure SIEM Engineer | OPM | Jul 2023 - Jul 2024
+- Built and maintained Microsoft Sentinel SIEM for federal civilian environment under FISMA / NIST 800-53 requirements
+- Developed PowerShell and Microsoft Graph API automation for security operations and continuous monitoring reporting
+- Supported ATO documentation and security control assessments for cloud-hosted federal systems
+
+Sentinel Engineer | Microsoft Azure / Insight Global | Nov 2021 - Apr 2023
+- Deployed Microsoft Sentinel for enterprise clients; built custom KQL workbooks, alerts, and threat hunting queries
+- Integrated Defender for Cloud with Sentinel for unified threat detection and automated incident response workflows
+- Designed zero trust architecture and conditional access implementations for Azure AD environments
+- Performed external attack surface assessments to reduce client exposure prior to Sentinel onboarding
+
+Network Security Analyst | Avnet | Feb 2020 - Nov 2021
+- Managed Sophos endpoint security and Cisco Meraki network infrastructure across multi-site enterprise environment
+- Performed incident response, forensic triage, and security automation workflows using Python and PowerShell
+- Maintained IAM, RBAC policies, and vulnerability remediation tracking
+
+SKILLS
+Offensive Security: Penetration Testing | EASM | Vulnerability Management | Parrot OS / ShellShock | HackTheBox (Top 1%)
+Cloud Security: Microsoft Sentinel | Defender for Cloud | Entra ID / Azure AD | Azure Policy | CSPM | EASM
+SIEM / Detection: KQL | Log Ingestion Pipelines | MITRE ATT&CK | Threat Hunting | SOAR | Incident Response
+Identity & IAM: Conditional Access | MFA | SSO | RBAC | Microsoft Graph API
+Automation & Dev: Python | PowerShell | Bash | Azure DevOps | GitHub | LLM Automation
+Compliance: FISMA | NIST 800-53 | FedRAMP | CMMC | Zero Trust Architecture
+Endpoint & Network: Sophos | Cisco Meraki | Forensic Triage
+
+CERTIFICATIONS
+CompTIA SecurityX ce (CASP+) - Mar 2026
+CompTIA Security+ - Apr 2024
+Microsoft Azure Fundamentals (AZ-900)
+DoD Public Trust Clearance (Active)
+
+EDUCATION
+B.S. Network Security & Administration | ITT Technical Institute | 2011-2014
+
+--- KEYWORD POOL (optimizer use only — not resume content) ---
+Draw from this pool when a JD uses these terms and they accurately reflect my background.
+Do not invent experience. Only surface terms I have genuine hands-on exposure to.
+
+SIEM / Detection Engineering:
+Microsoft Sentinel, Azure Sentinel, KQL, Kusto Query Language, Log Analytics, Data Collection Rules,
+DCR, Log Ingestion API, Custom Logs, Analytics Rules, Scheduled Query Rules, Fusion Rules,
+SOAR, Playbooks, Logic Apps, Azure Automation, Watchlists, Threat Intelligence, TI indicators,
+Workbooks, Dashboards, Hunting Queries, Notebooks, UEBA, Entity Analytics,
+Splunk (exposure), Elastic SIEM (exposure), QRadar (exposure)
+
+Cloud Security (Microsoft):
+Microsoft Defender for Cloud, Defender for Servers, Defender for Containers,
+Defender for Storage, Defender for SQL, Defender for Key Vault, Defender for DNS,
+Defender XDR, Microsoft 365 Defender, Defender for Endpoint (MDE), Defender for Identity (MDI),
+Defender for Office 365, Defender for Cloud Apps (MCAS), Azure Security Center,
+Secure Score, Security Posture Management, CSPM, CWPP,
+Entra ID, Azure Active Directory, Azure AD, Conditional Access, Identity Protection,
+Privileged Identity Management (PIM), Entitlement Management, Access Reviews,
+MFA, SSPR, B2B, B2C, Managed Identity, Service Principals, App Registrations,
+Azure Policy, Policy Initiatives, Blueprints, Management Groups, RBAC, Resource Locks,
+Azure Firewall, NSG, WAF, Application Gateway, Front Door, DDoS Protection,
+Azure Key Vault, Secrets Management, Certificate Management, Disk Encryption,
+Azure Monitor, Diagnostic Settings, Activity Log, Resource Graph,
+Microsoft Purview, DLP, Information Protection, Sensitivity Labels, Insider Risk Management,
+EASM, External Attack Surface Management, Defender EASM
+
+Cloud Security (Multi-cloud):
+AWS Security Hub, GuardDuty, CloudTrail, IAM (AWS), SCPs (exposure),
+GCP Security Command Center (exposure),
+Prisma Cloud (exposure), Wiz (exposure), Orca (exposure)
+
+Identity & Access Management:
+Zero Trust Architecture, Zero Trust Network Access (ZTNA),
+SSO, SAML, OAuth 2.0, OIDC, Federation,
+RBAC, ABAC, PAM, Privileged Access, Just-In-Time Access,
+Active Directory, Group Policy, On-premises AD, AD Connect, Hybrid Identity,
+CyberArk (exposure), BeyondTrust (exposure)
+
+Offensive Security / Pentesting:
+Penetration Testing, Network Penetration Testing, Web Application Penetration Testing,
+Internal Penetration Testing, External Penetration Testing,
+ShellShock (custom framework), Parrot OS, Kali Linux,
+Nmap, Nessus, Metasploit, Burp Suite, Gobuster, Nikto, Impacket,
+OSINT, Reconnaissance, Enumeration, Exploitation, Post-Exploitation, Lateral Movement,
+Privilege Escalation, Persistence, Active Directory Attacks, Kerberoasting, Pass-the-Hash,
+HackTheBox (Top 1% globally), TryHackMe,
+Red Team, Adversary Simulation, Purple Team, Assumed Breach
+
+Vulnerability Management:
+Vulnerability Assessment, Vulnerability Scanning, Risk Prioritization, CVSS,
+Remediation Tracking, Patch Management, Attack Surface Reduction,
+Tenable, Qualys (exposure), Rapid7 (exposure),
+EASM, External Exposure, Asset Discovery, Subdomain Enumeration
+
+Incident Response & Threat Hunting:
+Incident Response, IR Playbooks, Triage, Containment, Eradication, Recovery,
+Digital Forensics, Memory Forensics, Disk Forensics, Log Forensics,
+Threat Hunting, Hypothesis-Driven Hunting, MITRE ATT&CK, ATT&CK Navigator,
+Threat Intelligence, IOC, IOA, TTPs, Kill Chain, Diamond Model,
+DFIR, SOC Operations, Tier 1/2/3 Analysis, Escalation, Alert Triage
+
+Compliance & Governance:
+FISMA, NIST SP 800-53, NIST CSF, NIST 800-171,
+FedRAMP, ATO, System Security Plan (SSP), POA&M, Continuous Monitoring,
+CMMC, ITAR, DoD Public Trust Clearance,
+CIS Controls, CIS Benchmarks, DISA STIGs,
+SOC 2 (Type I/II awareness), ISO 27001 (awareness),
+HIPAA (awareness), PCI DSS (awareness),
+GRC, Risk Management, Security Policy, Audit Support
+
+Automation & Development:
+Python, PowerShell, Bash, KQL, Microsoft Graph API,
+REST APIs, JSON, Azure Logic Apps, Azure Functions,
+Git, GitHub, Azure DevOps, CI/CD awareness,
+LLM integration, AI-assisted security workflows, Prompt Engineering,
+Infrastructure as Code (IaC) awareness, Bicep (exposure), Terraform (exposure)
+
+Networking & Endpoint:
+TCP/IP, DNS, DHCP, VPN, TLS/SSL, HTTP/S, SMTP,
+Firewall Management, Network Segmentation, VLAN, NAC,
+Cisco Meraki, Sophos, Endpoint Detection and Response (EDR),
+SASE (awareness), SD-WAN (awareness)
+--- END KEYWORD POOL ---`;
+
+const STATUS_CYCLE = ['applied','queued','interview','assessment','info_requested','offer','declined','ghosted'];
+const STATUS_LABELS = {
+  applied: 'Applied', queued: 'Queued', interview: 'Interview', assessment: 'Assessment',
+  info_requested: 'Info Req.', offer: 'Offer', declined: 'Declined', ghosted: 'Ghosted'
+};
+
+let optimizedText = '';
+let lastJd = '';
+let _discoverJobs = [];
+
+document.getElementById('resume-input').value = RESUME;
+
+// JD score on input
+let _scoreTimer = null;
+let _beforeScore = null;
+document.getElementById('jd-input').addEventListener('input', function() {
+  const indicator = document.getElementById('jd-saved-indicator');
+  indicator.classList.toggle('show', this.value.trim().length > 0);
+  clearTimeout(_scoreTimer);
+  _beforeScore = null;
+  document.getElementById('score-before').style.display = 'none';
+  document.getElementById('score-arrow').style.display = 'none';
+  document.getElementById('score-delta').style.display = 'none';
+  _scoreTimer = setTimeout(updateScore, 600);
+});
+
+async function updateScore() {
+  const jd = document.getElementById('jd-input').value.trim();
+  const resume = document.getElementById('resume-input').value.trim();
+  const widget = document.getElementById('score-widget');
+  if (!jd || jd.length < 80) { widget.classList.remove('show'); _beforeScore = null; return; }
+  try {
+    const r = await fetch('/api/resume-score', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jd, resume})
+    });
+    const d = await r.json();
+    const score = d.score || 0;
+    _beforeScore = score;
+    const tier = score >= 70 ? 'high' : score >= 50 ? 'mid' : 'low';
+    document.getElementById('score-num').textContent = score;
+    document.getElementById('score-num').className = `score-num ${tier}`;
+    document.getElementById('score-bar').style.width = score + '%';
+    document.getElementById('score-bar').className = `score-bar-fill ${tier}`;
+    const matched = d.matched || [], missing = d.missing || [];
+    document.getElementById('score-summary').textContent =
+      `${matched.length} keywords matched · ${d.missing_count || missing.length} missing`;
+    document.getElementById('score-chips').innerHTML =
+      missing.slice(0,8).map(t => `<span class="score-chip">${esc(t)}</span>`).join('');
+    widget.classList.add('show');
+  } catch(e) {}
+}
+
+async function updateScoreAfter(optimized, jd) {
+  if (_beforeScore === null) return;
+  try {
+    const r = await fetch('/api/resume-score', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jd, resume: optimized})
+    });
+    const d = await r.json();
+    const after = d.score || 0;
+    const delta = after - _beforeScore;
+    const tier = after >= 70 ? 'high' : after >= 50 ? 'mid' : 'low';
+    const beforeEl = document.getElementById('score-before');
+    beforeEl.textContent = _beforeScore;
+    beforeEl.style.display = 'inline';
+    document.getElementById('score-arrow').style.display = 'inline';
+    document.getElementById('score-num').textContent = after;
+    document.getElementById('score-num').className = `score-num ${tier}`;
+    const deltaEl = document.getElementById('score-delta');
+    deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
+    deltaEl.style.color = delta >= 0 ? 'var(--green)' : '#f87171';
+    deltaEl.style.display = 'inline';
+    document.getElementById('score-bar').style.width = after + '%';
+    document.getElementById('score-bar').className = `score-bar-fill ${tier}`;
+    const matched = d.matched || [], missing = d.missing || [];
+    document.getElementById('score-summary').textContent =
+      `After optimize: ${matched.length} matched · ${d.missing_count || missing.length} still missing`;
+    document.getElementById('score-chips').innerHTML =
+      missing.slice(0,8).map(t => `<span class="score-chip">${esc(t)}</span>`).join('');
+    document.getElementById('score-widget').classList.add('show');
+  } catch(e) {}
+}
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const dot = document.getElementById('status-dot');
+    const lbl = document.getElementById('status-label');
+    if (d.claude_ready) { dot.className = 'ok'; lbl.textContent = 'Claude ready'; }
+    else { dot.className = 'err'; lbl.textContent = 'Claude unavailable'; }
+  } catch {
+    document.getElementById('status-dot').className = 'err';
+    document.getElementById('status-label').textContent = 'Server error';
+  }
+}
+
+async function runOptimize() {
+  const ats    = document.getElementById('ats-select').value;
+  const jd     = document.getElementById('jd-input').value.trim();
+  const resume = document.getElementById('resume-input').value.trim();
+  if (!ats)    { alert('Please select a target ATS.'); return; }
+  if (!jd)     { alert('Please paste the job description.'); return; }
+
+  const btn  = document.getElementById('optimize-btn');
+  const lbl  = document.getElementById('btn-label');
+  const spin = document.getElementById('spinner');
+  btn.disabled = true; lbl.style.display = 'none'; spin.style.display = 'block';
+  const out = document.getElementById('output-text');
+  out.className = 'placeholder';
+  out.textContent = 'Optimizing... this takes 30-60 seconds.';
+
+  try {
+    const r = await fetch('/api/optimize', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ ats, jd, resume })
+    });
+    const d = await r.json();
+    if (d.error) {
+      out.className = 'placeholder'; out.textContent = 'Error: ' + d.error;
+    } else {
+      optimizedText = d.optimized; lastJd = jd;
+      out.className = ''; out.textContent = optimizedText;
+      if (d.company) document.getElementById('log-company').value = d.company;
+      if (d.role)    document.getElementById('log-role').value = d.role;
+      const compName = document.getElementById('log-company').value.trim();
+      document.getElementById('tab-btn-resume').textContent =
+        compName ? 'Optimized Resume — ' + compName : 'Optimized Resume';
+      downloadDocx();
+      updateScoreAfter(optimizedText, jd);
+    }
+  } catch (e) {
+    out.className = 'placeholder'; out.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false; lbl.style.display = ''; spin.style.display = 'none';
+  }
+}
+
+function copyOutput() {
+  if (!optimizedText) return;
+  const flash = document.getElementById('copy-flash');
+  navigator.clipboard.writeText(optimizedText).then(() => {
+    flash.classList.add('show'); setTimeout(() => flash.classList.remove('show'), 1500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = optimizedText; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    flash.classList.add('show'); setTimeout(() => flash.classList.remove('show'), 1500);
+  });
+}
+
+async function downloadDocx() {
+  if (!optimizedText) return;
+  if (typeof docx === 'undefined') { alert('docx.js not loaded yet. Try refreshing.'); return; }
+  const ats     = document.getElementById('ats-select').value || 'Resume';
+  const company = document.getElementById('log-company').value.trim();
+  const today   = new Date().toISOString().slice(0,10);
+  const lines   = optimizedText.split('\n');
+  const children = lines.map(line => new docx.Paragraph({
+    text: line.trim(), spacing: { after: line.trim() === '' ? 0 : 60 },
+  }));
+  const doc = new docx.Document({ sections: [{ children }] });
+  const blob = await docx.Packer.toBlob(doc);
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `Jamie_Loring_Resume_${company ? company + '_' : ''}${ats}_${today}.docx`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+async function logApplication() {
+  const company = document.getElementById('log-company').value.trim();
+  const role    = document.getElementById('log-role').value.trim();
+  const source  = document.getElementById('log-source').value;
+  const ats     = document.getElementById('ats-select').value;
+  const jd_text = document.getElementById('jd-input').value.trim();
+  if (!company || !role) { alert('Enter company and role.'); return; }
+  const r = await fetch('/api/applications', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ company, role, ats, source, jd_text })
+  });
+  if (r.ok) {
+    document.getElementById('log-company').value = '';
+    document.getElementById('log-role').value = '';
+    document.getElementById('jd-saved-indicator').classList.remove('show');
+    loadLog();
+  }
+}
+
+async function cycleStatus(appId, currentStatus) {
+  const idx  = STATUS_CYCLE.indexOf(currentStatus);
+  const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  await fetch(`/api/applications/${appId}`, {
+    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ status: next })
+  });
+  loadLog();
+}
+
+async function syncGmail() {
+  const btn    = document.getElementById('sync-btn');
+  const lbl    = document.getElementById('sync-label');
+  const spin   = document.getElementById('sync-spinner');
+  const result = document.getElementById('sync-result');
+  btn.disabled = true; lbl.style.display = 'none'; spin.style.display = 'block';
+  result.className = 'sync-result'; result.textContent = 'Scanning Gmail…';
+  try {
+    const r = await fetch('/api/gmail-sync', { method: 'POST' });
+    const d = await r.json();
+    if (d.error) {
+      result.className = 'sync-result err'; result.textContent = d.error;
+    } else if (d.updated && d.updated.length > 0) {
+      result.className = 'sync-result ok';
+      result.textContent = `Updated ${d.updated.length} application${d.updated.length !== 1 ? 's' : ''}: ` +
+        d.updated.map(u => u.note || u.status).join(' · ');
+      loadLog();
+    } else {
+      result.className = 'sync-result'; result.textContent = d.message || 'No new status updates found.';
+    }
+  } catch (e) {
+    result.className = 'sync-result err'; result.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false; lbl.style.display = ''; spin.style.display = 'none';
+  }
+}
+
+async function loadLog() {
+  const r    = await fetch('/api/applications');
+  const apps = await r.json();
+  const tbody   = document.getElementById('log-body');
+  const countEl = document.getElementById('app-count');
+  countEl.textContent = apps.length ? '(' + apps.length + ')' : '';
+  if (!apps.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">No applications logged yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = apps.map(a => {
+    const d  = new Date(a.timestamp);
+    const ds = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const ts = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    const st = a.status || 'applied';
+    const statusLabel = STATUS_LABELS[st] || st;
+    const jdIcon = a.jd_text ? '<span title="JD saved" style="color:var(--green);margin-left:4px;font-size:10px">●</span>' : '';
+    return '<tr><td>' + ds + ' ' + ts + '</td>' +
+      '<td>' + esc(a.company) + jdIcon + '</td>' +
+      '<td>' + esc(a.role) + '</td>' +
+      '<td>' + esc(a.ats) + '</td>' +
+      '<td>' + esc(a.source) + '</td>' +
+      '<td><span class="status-badge status-' + esc(st) + '" onclick="cycleStatus(\'' + esc(a.id) + '\',\'' + esc(st) + '\')" title="Click to change status">' + esc(statusLabel) + '</span>' +
+      (a.notes ? '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + esc(a.notes) + '</div>' : '') +
+      '</td></tr>';
+  }).join('');
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+function switchView(name, btn) {
+  if (name === 'leads') { setTimeout(loadLeads, 0); }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+let coverLetterText = '';
+
+async function runCoverLetter() {
+  const jd      = document.getElementById('jd-input').value.trim();
+  const company = document.getElementById('log-company').value.trim();
+  const role    = document.getElementById('log-role').value.trim();
+  const ats     = document.getElementById('ats-select').value;
+  if (!jd) { alert('Paste a job description first.'); return; }
+  const btn  = document.getElementById('cl-btn');
+  const lbl  = document.getElementById('cl-btn-label');
+  const spin = document.getElementById('cl-spinner');
+  btn.disabled = true; lbl.style.display = 'none'; spin.style.display = 'block';
+  const out = document.getElementById('cl-output-text');
+  out.className = 'placeholder'; out.textContent = 'Writing cover letter... 30-60 seconds.';
+  try {
+    const r = await fetch('/api/cover-letter', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ jd, company, role, ats })
+    });
+    const d = await r.json();
+    if (d.error) {
+      out.className = 'placeholder'; out.textContent = 'Error: ' + d.error;
+    } else {
+      coverLetterText = d.cover_letter;
+      out.className = ''; out.textContent = coverLetterText;
+      document.getElementById('tab-btn-coverletter').textContent =
+        company ? 'Cover Letter — ' + company : 'Cover Letter';
+    }
+  } catch (e) {
+    out.className = 'placeholder'; out.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false; lbl.style.display = ''; spin.style.display = 'none';
+  }
+}
+
+async function downloadCLDocx() {
+  if (!coverLetterText) return;
+  if (typeof docx === 'undefined') { alert('docx.js not loaded yet. Try refreshing.'); return; }
+  const company = document.getElementById('log-company').value.trim() || 'Company';
+  const today   = new Date().toISOString().slice(0, 10);
+  const paragraphs = coverLetterText.split('\n').map(line => {
+    const t = line.trim();
+    return new docx.Paragraph({
+      text: t, spacing: { after: t === '' ? 0 : 160, line: 340 }, style: 'Normal',
+    });
+  });
+  const doc = new docx.Document({
+    styles: { default: { document: { run: { font: 'Garamond', size: 24 } } } },
+    sections: [{
+      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 } } },
+      children: paragraphs,
+    }],
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `Jamie_Loring_CoverLetter_${company}_${today}.docx`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function copyCL() {
+  if (!coverLetterText) return;
+  const flash = document.getElementById('cl-copy-flash');
+  navigator.clipboard.writeText(coverLetterText).then(() => {
+    flash.classList.add('show'); setTimeout(() => flash.classList.remove('show'), 1500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = coverLetterText; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    flash.classList.add('show'); setTimeout(() => flash.classList.remove('show'), 1500);
+  });
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 86400) return 'Today';
+    if (diff < 172800) return '1 day ago';
+    const days = Math.floor(diff / 86400);
+    if (days < 30) return `${days}d ago`;
+    return `${Math.floor(days/30)}mo ago`;
+  } catch { return ''; }
+}
+
+async function loadJobs() {
+  const list   = document.getElementById('job-list');
+  const status = document.getElementById('jobs-status');
+  status.textContent = 'Loading…'; list.innerHTML = '';
+  try {
+    const r = await fetch('/api/job-search');
+    const data = await r.json();
+    const jobs = data.jobs || [];
+    if (!jobs.length) { status.textContent = 'No results right now.'; return; }
+    status.textContent = `${jobs.length} matches — refreshed just now`;
+    jobs.forEach(j => {
+      const a = document.createElement('a');
+      a.className = 'job-card';
+      a.href = j.url || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      let meta = `<span class="job-tag">${esc(j.source)}</span>`;
+      if (j.location) meta += ` <span class="job-tag loc">${esc(j.location)}</span>`;
+      if (j.salary)   meta += ` <span class="job-tag salary">${esc(j.salary)}</span>`;
+      a.innerHTML = `<div class="job-card-title">${esc(j.title)}</div>
+        <div class="job-card-company">${esc(j.company)}</div>
+        <div class="job-card-meta">${meta}</div>`;
+      list.appendChild(a);
+    });
+  } catch (e) { status.textContent = 'Error fetching jobs.'; }
+}
+
+// Discover
+async function loadDiscover() {
+  const btn    = document.getElementById('disc-refresh-btn');
+  const lbl    = document.getElementById('disc-refresh-label');
+  const spin   = document.getElementById('disc-spinner');
+  const status = document.getElementById('disc-status');
+  btn.disabled = true; lbl.style.display = 'none'; spin.style.display = 'inline-block';
+  status.textContent = 'Scanning 6 job boards… (10-20s)';
+  try {
+    const r = await fetch('/api/discover');
+    const data = await r.json();
+    _discoverJobs = data.jobs || [];
+    const hc = data.hidden_count || 0;
+    document.getElementById('disc-hidden-count').textContent =
+      hc > 0 ? `${hc} hidden` : '';
+    renderDiscover();
+    status.textContent = `${_discoverJobs.length} jobs found · sorted by resume match`;
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false; lbl.style.display = ''; spin.style.display = 'none';
+  }
+}
+
+function renderDiscover() {
+  const minScore  = parseInt(document.getElementById('disc-min-score').value || '0');
+  const srcFilter = document.getElementById('disc-source').value;
+  const grid      = document.getElementById('disc-grid');
+
+  const jobs = _discoverJobs.filter(j => {
+    if (j.score < minScore) return false;
+    if (srcFilter && j.source !== srcFilter) return false;
+    return true;
+  });
+
+  if (!jobs.length) {
+    grid.innerHTML = '<div class="disc-empty">No jobs match these filters. Try lowering the min score or clearing the source filter.</div>';
+    return;
+  }
+
+  grid.innerHTML = jobs.map(j => {
+    const score = j.score || 0;
+    const tier  = score >= 65 ? 'high' : score >= 45 ? 'mid' : 'low';
+    let meta = `<span class="job-tag">${esc(j.source)}</span>`;
+    if (j.location) meta += ` <span class="job-tag loc">${esc(j.location)}</span>`;
+    if (j.salary)   meta += ` <span class="job-tag salary">${esc(j.salary)}</span>`;
+    const age = relativeTime(j.created);
+    if (age) meta += ` <span class="job-tag loc">${esc(age)}</span>`;
+    const missing = (j.missing || []).map(t =>
+      `<span class="disc-missing-chip">${esc(t)}</span>`).join('');
+    const jobJson = esc(JSON.stringify({
+      company: j.company, role: j.title, source: j.source, url: j.url
+    }));
+    return `<div class="disc-card" id="disc-${esc(j.id)}">
+      <div class="disc-score-circle ${tier}">${score}</div>
+      <div class="disc-body">
+        <div class="disc-title"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></div>
+        <div class="disc-company">${esc(j.company)}</div>
+        <div class="disc-meta">${meta}</div>
+        ${missing ? `<div class="disc-missing">${missing}</div>` : ''}
+      </div>
+      <div class="disc-actions">
+        <button class="sm" onclick='queueJob(${jobJson})'>Queue</button>
+        <button class="sm danger" onclick='hideJob("${esc(j.url)}","disc-${esc(j.id)}")'>Hide</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function hideJob(url, cardId) {
+  try {
+    await fetch('/api/discover/hide', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url })
+    });
+    const card = document.getElementById(cardId);
+    if (card) { card.style.opacity = '0'; card.style.transition = 'opacity 0.2s'; setTimeout(() => card.remove(), 200); }
+    _discoverJobs = _discoverJobs.filter(j => j.url !== url);
+    const hcEl = document.getElementById('disc-hidden-count');
+    const cur = parseInt(hcEl.textContent) || 0;
+    hcEl.textContent = `${cur + 1} hidden`;
+  } catch(e) {}
+}
+
+async function queueJob({company, role, source, url}) {
+  try {
+    const r = await fetch('/api/discover/queue', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ company, role, source, url })
+    });
+    if (r.ok) {
+      // Prefill the optimize form and switch to Optimize tab
+      document.getElementById('log-company').value = company;
+      document.getElementById('log-role').value = role;
+      switchView('optimize', document.querySelector('.page-nav-btn'));
+      loadLog();
+      // Flash the log section
+      const logCard = document.querySelector('#log-body').closest('.card');
+      logCard.style.outline = '2px solid var(--accent)';
+      setTimeout(() => logCard.style.outline = '', 1500);
+    }
+  } catch(e) {}
+}
+
+// Daily Checklist
+function clTodayKey() {
+  return 'cl-' + new Date().toISOString().slice(0, 10);
+}
+function clLoad() {
+  try { return JSON.parse(localStorage.getItem(clTodayKey()) || '{}'); } catch(e) { return {}; }
+}
+function clSave(state) {
+  try { localStorage.setItem(clTodayKey(), JSON.stringify(state)); } catch(e) {}
+}
+function clUpdateProgress() {
+  const state = clLoad();
+  const platforms = ['linkedin','indeed','dice','usajobs','glassdoor','ziprecruiter','direct'];
+  let totalDone = 0, totalAll = 0;
+  platforms.forEach(p => {
+    const tasks = document.querySelectorAll('[data-platform="' + p + '"]');
+    let done = 0;
+    tasks.forEach(t => {
+      if (state[p + '.' + t.dataset.key]) { done++; totalDone++; }
+      totalAll++;
+    });
+    const el = document.getElementById('cl-prog-' + p);
+    if (el) el.textContent = done + '/' + tasks.length;
+  });
+  const ovEl = document.getElementById('cl-overall-progress');
+  if (ovEl) ovEl.textContent = totalDone + ' of ' + totalAll + ' done today';
+}
+function clResetAll() {
+  try { localStorage.removeItem(clTodayKey()); } catch(e) {}
+  document.querySelectorAll('.cl-task').forEach(t => {
+    t.querySelector('input').checked = false;
+    t.classList.remove('done');
+  });
+  clUpdateProgress();
+}
+function clInit() {
+  const state = clLoad();
+  const today = new Date().toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+  const el = document.getElementById('cl-date-label');
+  if (el) el.textContent = 'Today: ' + today;
+  document.querySelectorAll('.cl-task').forEach(task => {
+    const p = task.dataset.platform;
+    const k = task.dataset.key;
+    const stateKey = p + '.' + k;
+    const cb = task.querySelector('input[type=checkbox]');
+    if (state[stateKey]) { cb.checked = true; task.classList.add('done'); }
+    task.addEventListener('click', function(e) {
+      if (e.target.tagName === 'A') return;
+      const s = clLoad();
+      cb.checked = !cb.checked;
+      if (cb.checked) { task.classList.add('done'); s[stateKey] = true; }
+      else { task.classList.remove('done'); delete s[stateKey]; }
+      clSave(s);
+      clUpdateProgress();
+      e.preventDefault();
+    });
+    cb.addEventListener('click', e => e.stopPropagation());
+  });
+  clUpdateProgress();
+}
+
+checkStatus();
+loadLog();
+loadJobs();
+clInit();
+</script>
+<script src="/docx.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+//  LEADS TAB
+// ══════════════════════════════════════════════════════════════
+let _leadsStatus = 'new';
+let _leadData    = [];
+
+async function loadLeads() {
+  try {
+    const r = await fetch('/api/leads?status=' + _leadsStatus);
+    const d = await r.json();
+    _leadData = d.leads || [];
+    renderLeads();
+    updateLeadCounts(d.counts || {});
+    updateRunMeta(d.last_run);
+  } catch(e) {
+    document.getElementById('leads-list').innerHTML =
+      '<div class="leads-empty">Failed to load leads: ' + e.message + '</div>';
+  }
+  loadBlacklist();
+}
+
+function updateLeadCounts(counts) {
+  ['new','later','applied','skip'].forEach(s => {
+    const el = document.getElementById('lc-' + s);
+    if (el) el.textContent = '(' + (counts[s] || 0) + ')';
+  });
+}
+
+function updateRunMeta(run) {
+  const el = document.getElementById('leads-run-meta');
+  if (!run) { el.textContent = 'No runs yet'; return; }
+  const t = new Date(run.run_at);
+  const ago = timeSince(t);
+  el.textContent = 'Last run ' + ago + ' — ' + run.added + ' added, ' + run.filtered + ' filtered';
+}
+
+function timeSince(d) {
+  const s = Math.floor((Date.now() - d) / 1000);
+  if (s < 60)   return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function switchLeadStatus(status, btn) {
+  _leadsStatus = status;
+  document.querySelectorAll('.ls-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadLeads();
+}
+
+function renderLeads() {
+  const el = document.getElementById('leads-list');
+  if (!_leadData.length) {
+    el.innerHTML = '<div class="leads-empty">No leads in this bucket.</div>';
+    return;
+  }
+  el.innerHTML = _leadData.map(l => {
+    const score = l.score || 0;
+    const hi    = score >= 80;
+    const med   = score >= 55 && score < 80;
+    const badgeClass = hi ? 'hi' : med ? 'med' : '';
+
+    const wpLabel = {
+      onsite_hybrid: 'On-site/Hybrid',
+      phoenix_remote: 'Phoenix Remote',
+      remote: 'Remote'
+    }[l.workplace] || l.workplace;
+    const wpClass = l.workplace === 'remote' ? 'remote' : l.workplace === 'phoenix_remote' ? 'phoenix_remote' : '';
+
+    const postedAge = l.posted ? ageHours(l.posted) : null;
+    const stale = postedAge !== null && postedAge > 72;
+    const postedText = l.posted
+      ? '<span class="lead-posted' + (stale ? ' stale' : '') + '">' + l.posted + (stale ? ' ✕ stale' : '') + '</span>'
+      : '';
+
+    const salary = l.salary
+      ? '<span class="lead-salary">' + esc(l.salary) + '</span> &middot; '
+      : '';
+
+    const actions = buildLeadActions(l);
+
+    return '<div class="lead-row" id="lr-' + esc(l.id) + '">'
+      + '<div class="lead-score-badge ' + badgeClass + '">' + score + '</div>'
+      + '<div class="lead-body">'
+      + '<div class="lead-title-row">'
+      + '<span class="lead-title">' + esc(l.title) + '</span>'
+      + '<span class="lead-source-chip">' + esc(l.source) + '</span>'
+      + '</div>'
+      + '<div class="lead-meta">' + esc(l.company) + ' &middot; ' + esc(l.location)
+      + '<span class="lead-workplace-chip ' + wpClass + '">' + wpLabel + '</span>'
+      + '</div>'
+      + '<div class="lead-meta">' + salary + postedText + '</div>'
+      + (l.reason ? '<div class="lead-reason">' + esc(l.reason) + '</div>' : '')
+      + '<div class="lead-actions">' + actions + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+function buildLeadActions(l) {
+  const did = 'data-lid="' + esc(l.id) + '"';
+  let a = '<a class="la-btn primary" href="' + esc(l.url) + '" target="_blank" rel="noreferrer">Open posting</a>';
+  if (l.status !== 'applied') {
+    a += '<button class="la-btn" ' + did + ' data-st="applied" onclick="setLeadStatus(this.dataset.lid,this.dataset.st)">Applied</button>';
+  }
+  if (l.status !== 'later') {
+    a += '<button class="la-btn muted" ' + did + ' data-st="later" onclick="setLeadStatus(this.dataset.lid,this.dataset.st)">Later</button>';
+  }
+  if (l.status !== 'skip') {
+    a += '<button class="la-btn muted" ' + did + ' data-st="skip" onclick="setLeadStatus(this.dataset.lid,this.dataset.st)">Skip</button>';
+  }
+  if (l.status !== 'new') {
+    a += '<button class="la-btn" ' + did + ' data-st="new" onclick="setLeadStatus(this.dataset.lid,this.dataset.st)">Restore</button>';
+  }
+  return a;
+}
+
+function ageHours(dateStr) {
+  try {
+    return (Date.now() - new Date(dateStr).getTime()) / 3600000;
+  } catch(e) { return 0; }
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function setLeadStatus(id, status) {
+  const row = document.getElementById('lr-' + id);
+  if (row) row.style.opacity = '.4';
+  try {
+    await fetch('/api/leads/' + encodeURIComponent(id) + '/status', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status})
+    });
+    loadLeads();
+  } catch(e) {
+    if (row) row.style.opacity = '1';
+    alert('Failed: ' + e.message);
+  }
+}
+
+async function refreshLeads() {
+  const btn = document.getElementById('leads-refresh-btn');
+  const meta = document.getElementById('leads-run-meta');
+  btn.disabled = true;
+  btn.textContent = 'Refreshing…';
+  meta.textContent = 'Running email sync…';
+  try {
+    const r = await fetch('/api/leads/refresh', {method: 'POST'});
+    const d = await r.json();
+    if (d.error) {
+      meta.textContent = 'Error: ' + d.error;
+    } else {
+      meta.textContent = 'Done — ' + d.added + ' added, ' + d.filtered + ' filtered';
+      loadLeads();
+    }
+  } catch(e) {
+    meta.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\u21bb Refresh now';
+  }
+}
+
+async function loadBlacklist() {
+  try {
+    const r = await fetch('/api/leads/blacklist');
+    const d = await r.json();
+    renderBlacklist(d.blacklist || []);
+  } catch(e) {}
+}
+
+function renderBlacklist(list) {
+  const el = document.getElementById('bl-list');
+  if (!list.length) { el.innerHTML = '<span style="font-size:12px;color:var(--muted)">None</span>'; return; }
+  el.innerHTML = list.map(c =>
+    '<span class="bl-chip">' + esc(c)
+    + '<span class="bl-chip-remove" data-co="' + esc(c) + '" onclick="removeBlacklist(this.dataset.co)">&times;</span></span>'
+  ).join('');
+}
+
+async function addBlacklist() {
+  const inp = document.getElementById('bl-input');
+  const company = (inp.value || '').trim();
+  if (!company) return;
+  await fetch('/api/leads/blacklist', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({company})
+  });
+  inp.value = '';
+  loadBlacklist();
+}
+
+async function removeBlacklist(company) {
+  await fetch('/api/leads/blacklist/' + encodeURIComponent(company), {method:'DELETE'});
+  loadBlacklist();
+}
+</script>
+
+<!-- LEADS VIEW -->
+<div id="view-leads" class="view">
+<div class="leads-wrap">
+
+  <div class="leads-header">
+    <div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:2px;">Job Leads</div>
+      <div class="leads-header-meta" id="leads-run-meta">Loading&hellip;</div>
+    </div>
+    <button class="leads-refresh-btn" id="leads-refresh-btn" onclick="refreshLeads()">&#8635; Refresh now</button>
+  </div>
+
+  <div class="leads-status-bar">
+    <button class="ls-tab active" data-status="new"    onclick="switchLeadStatus('new',this)">New <span class="ls-count" id="lc-new"></span></button>
+    <button class="ls-tab"        data-status="later"  onclick="switchLeadStatus('later',this)">Later <span class="ls-count" id="lc-later"></span></button>
+    <button class="ls-tab"        data-status="applied" onclick="switchLeadStatus('applied',this)">Applied <span class="ls-count" id="lc-applied"></span></button>
+    <button class="ls-tab"        data-status="skip"   onclick="switchLeadStatus('skip',this)">Skipped <span class="ls-count" id="lc-skip"></span></button>
+  </div>
+
+  <div id="leads-list"></div>
+
+  <div class="bl-panel">
+    <div class="bl-title">Company Blacklist</div>
+    <div class="bl-list" id="bl-list"></div>
+    <div class="bl-add-row">
+      <input class="bl-input" id="bl-input" placeholder="Add company&hellip;" onkeydown="if(event.key==='Enter')addBlacklist()">
+      <button class="bl-add-btn" onclick="addBlacklist()">Add</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>
