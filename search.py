@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Job search agent — runs every 3 hours via cron.
 100% free. Sources:
@@ -391,7 +391,7 @@ def fetch_usajobs(keyword):
             },
             headers={
                 'Host': 'data.usajobs.gov',
-                'User-Agent': 'jamie@jamieloring.com',
+                'User-Agent': os.environ.get('USAJOBS_USER_AGENT', os.environ.get('GMAIL_ADDRESS', 'user@example.com')),
                 'Authorization-Key': api_key,
             },
             timeout=15,

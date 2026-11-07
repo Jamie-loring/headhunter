@@ -1,4 +1,4 @@
-import sqlite3, json, os, re, subprocess, imaplib, email, urllib.request, urllib.parse
+﻿import sqlite3, json, os, re, subprocess, imaplib, email, urllib.request, urllib.parse
 import concurrent.futures
 from email.header import decode_header as email_decode_header
 from flask import Flask, jsonify, request, send_from_directory
@@ -32,151 +32,11 @@ TIER_GUIDE = {
     'direct':     'DIRECT CONTACT (no ATS — human eyes only): This resume goes straight to a recruiter or hiring manager, bypassing automated screening entirely. Prioritize readability, narrative flow, and standout achievements over keyword density. Lead with impact. Every bullet should answer "so what?" — make the accomplishment and its significance immediately obvious to a non-technical reader as well as a technical one. Clean, polished formatting. Make them want to pick up the phone.',
 }
 
-DEFAULT_RESUME = """JAMIE LORING
-623-297-8499 | jamie@jamieloring.com | Glendale, AZ
+DEFAULT_RESUME = """YOUR NAME
+YOUR-PHONE | your@email.com | City, ST
 
-PROFESSIONAL SUMMARY
-Senior cybersecurity engineer with 8+ years of experience specializing in offensive security, vulnerability management, and cloud defense. Builds and operates penetration testing frameworks, performs external attack surface management (EASM), and translates findings into developer-ready remediation. Operates Microsoft Sentinel SIEM, Defender for Cloud, and Entra ID at enterprise scale. CompTIA SecurityX (CASP+) certified; DoD Public Trust clearance active.
-
-OFFENSIVE SECURITY & PROJECTS
-- ShellShock: custom Parrot OS-based pentesting framework for network enumeration, exploitation, and post-exploitation automation
-- EASM: built tooling for continuous external asset discovery, subdomain enumeration, and exposure tracking across client environments
-- HackTheBox: global top 1% ranking across Active Directory, web exploitation, privilege escalation, and red team challenges
-- LLM Automation: developed Python/Claude-based agents for automated security research, threat intelligence enrichment, and workflow automation
-- Python scripting: security tooling, API integrations, log parsing, and operational automation across multiple roles
-
-EXPERIENCE
-
-Cloud & Threat Security Engineer | Troon | Jun 2026 - Oct 2026
-- Designed and maintained Microsoft Sentinel SIEM with custom KQL detection rules, threat hunting playbooks, and automated incident response
-- Managed Defender for Cloud security posture, Entra ID identity protection, and Azure Policy / CSPM across enterprise environment
-- Developed Python automation for security operations workflows and LLM-assisted threat intelligence enrichment
-- Collaborated with developers via Azure DevOps to triage, prioritize, and track vulnerability remediation to closure
-
-Azure Security Engineer | Arrivia | Jul 2025 - Jun 2026
-- Implemented Microsoft Sentinel log ingestion pipelines, analytics rules, and SOAR playbooks for cloud environment
-- Managed Entra ID conditional access policies, MFA enforcement, and identity security posture
-- Conducted threat hunting using KQL and MITRE ATT&CK framework; reduced false-positive alert volume through detection tuning
-- Performed internal vulnerability assessments and coordinated with engineering teams via GitHub for remediation tracking
-
-Azure SIEM Engineer | OPM | Jul 2023 - Jul 2024
-- Built and maintained Microsoft Sentinel SIEM for federal civilian environment under FISMA / NIST 800-53 requirements
-- Developed PowerShell and Microsoft Graph API automation for security operations and continuous monitoring reporting
-- Supported ATO documentation and security control assessments for cloud-hosted federal systems
-
-Sentinel Engineer | Microsoft Azure / Insight Global | Nov 2021 - Apr 2023
-- Deployed Microsoft Sentinel for enterprise clients; built custom KQL workbooks, alerts, and threat hunting queries
-- Integrated Defender for Cloud with Sentinel for unified threat detection and automated incident response workflows
-- Designed zero trust architecture and conditional access implementations for Azure AD environments
-- Performed external attack surface assessments to reduce client exposure prior to Sentinel onboarding
-
-Network Security Analyst | Avnet | Feb 2020 - Nov 2021
-- Managed Sophos endpoint security and Cisco Meraki network infrastructure across multi-site enterprise environment
-- Performed incident response, forensic triage, and security automation workflows using Python and PowerShell
-- Maintained IAM, RBAC policies, and vulnerability remediation tracking
-
-SKILLS
-Offensive Security: Penetration Testing | EASM | Vulnerability Management | Parrot OS / ShellShock | HackTheBox (Top 1%)
-Cloud Security: Microsoft Sentinel | Defender for Cloud | Entra ID / Azure AD | Azure Policy | CSPM | EASM
-SIEM / Detection: KQL | Log Ingestion Pipelines | MITRE ATT&CK | Threat Hunting | SOAR | Incident Response
-Identity & IAM: Conditional Access | MFA | SSO | RBAC | Microsoft Graph API
-Automation & Dev: Python | PowerShell | Bash | Azure DevOps | GitHub | LLM Automation
-Compliance: FISMA | NIST 800-53 | FedRAMP | CMMC | Zero Trust Architecture
-Endpoint & Network: Sophos | Cisco Meraki | Forensic Triage
-
-CERTIFICATIONS
-CompTIA SecurityX ce (CASP+) - Mar 2026
-CompTIA Security+ - Apr 2024
-Microsoft Azure Fundamentals (AZ-900)
-DoD Public Trust Clearance (Active)
-
-EDUCATION
-B.S. Network Security & Administration | ITT Technical Institute | 2011-2014
-
---- KEYWORD POOL (optimizer use only — not resume content) ---
-Draw from this pool when a JD uses these terms and they accurately reflect my background.
-Do not invent experience. Only surface terms I have genuine hands-on exposure to.
-
-SIEM / Detection Engineering:
-Microsoft Sentinel, Azure Sentinel, KQL, Kusto Query Language, Log Analytics, Data Collection Rules,
-DCR, Log Ingestion API, Custom Logs, Analytics Rules, Scheduled Query Rules, Fusion Rules,
-SOAR, Playbooks, Logic Apps, Azure Automation, Watchlists, Threat Intelligence, TI indicators,
-Workbooks, Dashboards, Hunting Queries, Notebooks, UEBA, Entity Analytics,
-Splunk (exposure), Elastic SIEM (exposure), QRadar (exposure)
-
-Cloud Security (Microsoft):
-Microsoft Defender for Cloud, Defender for Servers, Defender for Containers,
-Defender for Storage, Defender for SQL, Defender for Key Vault, Defender for DNS,
-Defender XDR, Microsoft 365 Defender, Defender for Endpoint (MDE), Defender for Identity (MDI),
-Defender for Office 365, Defender for Cloud Apps (MCAS), Azure Security Center,
-Secure Score, Security Posture Management, CSPM, CWPP,
-Entra ID, Azure Active Directory, Azure AD, Conditional Access, Identity Protection,
-Privileged Identity Management (PIM), Entitlement Management, Access Reviews,
-MFA, SSPR, B2B, B2C, Managed Identity, Service Principals, App Registrations,
-Azure Policy, Policy Initiatives, Blueprints, Management Groups, RBAC, Resource Locks,
-Azure Firewall, NSG, WAF, Application Gateway, Front Door, DDoS Protection,
-Azure Key Vault, Secrets Management, Certificate Management, Disk Encryption,
-Azure Monitor, Diagnostic Settings, Activity Log, Resource Graph,
-Microsoft Purview, DLP, Information Protection, Sensitivity Labels, Insider Risk Management,
-EASM, External Attack Surface Management, Defender EASM
-
-Cloud Security (Multi-cloud):
-AWS Security Hub, GuardDuty, CloudTrail, IAM (AWS), SCPs (exposure),
-GCP Security Command Center (exposure),
-Prisma Cloud (exposure), Wiz (exposure), Orca (exposure)
-
-Identity & Access Management:
-Zero Trust Architecture, Zero Trust Network Access (ZTNA),
-SSO, SAML, OAuth 2.0, OIDC, Federation,
-RBAC, ABAC, PAM, Privileged Access, Just-In-Time Access,
-Active Directory, Group Policy, On-premises AD, AD Connect, Hybrid Identity,
-CyberArk (exposure), BeyondTrust (exposure)
-
-Offensive Security / Pentesting:
-Penetration Testing, Network Penetration Testing, Web Application Penetration Testing,
-Internal Penetration Testing, External Penetration Testing,
-ShellShock (custom framework), Parrot OS, Kali Linux,
-Nmap, Nessus, Metasploit, Burp Suite, Gobuster, Nikto, Impacket,
-OSINT, Reconnaissance, Enumeration, Exploitation, Post-Exploitation, Lateral Movement,
-Privilege Escalation, Persistence, Active Directory Attacks, Kerberoasting, Pass-the-Hash,
-HackTheBox (Top 1% globally), TryHackMe,
-Red Team, Adversary Simulation, Purple Team, Assumed Breach
-
-Vulnerability Management:
-Vulnerability Assessment, Vulnerability Scanning, Risk Prioritization, CVSS,
-Remediation Tracking, Patch Management, Attack Surface Reduction,
-Tenable, Qualys (exposure), Rapid7 (exposure),
-EASM, External Exposure, Asset Discovery, Subdomain Enumeration
-
-Incident Response & Threat Hunting:
-Incident Response, IR Playbooks, Triage, Containment, Eradication, Recovery,
-Digital Forensics, Memory Forensics, Disk Forensics, Log Forensics,
-Threat Hunting, Hypothesis-Driven Hunting, MITRE ATT&CK, ATT&CK Navigator,
-Threat Intelligence, IOC, IOA, TTPs, Kill Chain, Diamond Model,
-DFIR, SOC Operations, Tier 1/2/3 Analysis, Escalation, Alert Triage
-
-Compliance & Governance:
-FISMA, NIST SP 800-53, NIST CSF, NIST 800-171,
-FedRAMP, ATO, System Security Plan (SSP), POA&M, Continuous Monitoring,
-CMMC, ITAR, DoD Public Trust Clearance,
-CIS Controls, CIS Benchmarks, DISA STIGs,
-SOC 2 (Type I/II awareness), ISO 27001 (awareness),
-HIPAA (awareness), PCI DSS (awareness),
-GRC, Risk Management, Security Policy, Audit Support
-
-Automation & Development:
-Python, PowerShell, Bash, KQL, Microsoft Graph API,
-REST APIs, JSON, Azure Logic Apps, Azure Functions,
-Git, GitHub, Azure DevOps, CI/CD awareness,
-LLM integration, AI-assisted security workflows, Prompt Engineering,
-Infrastructure as Code (IaC) awareness, Bicep (exposure), Terraform (exposure)
-
-Networking & Endpoint:
-TCP/IP, DNS, DHCP, VPN, TLS/SSL, HTTP/S, SMTP,
-Firewall Management, Network Segmentation, VLAN, NAC,
-Cisco Meraki, Sophos, Endpoint Detection and Response (EDR),
-SASE (awareness), SD-WAN (awareness)
---- END KEYWORD POOL ---"""
+[No resume configured. Go to Settings and paste in your resume as plain text.]
+"""
 
 STOP = {
     'the','and','for','with','that','this','have','from','will','are','not',
@@ -796,18 +656,26 @@ def cover_letter():
     if not jd:
         return jsonify({'error': 'jd is required'}), 400
 
-    company_line = f'at {company}' if company else 'for this role'
+    # Pull applicant name from stored resume
+    _resume_text = ''
+    try:
+        import sqlite3 as _sq
+        with _sq.connect(DB) as _c:
+            _row = _c.execute("SELECT value FROM settings WHERE key='resume'").fetchone()
+            if _row and _row[0]:
+                _resume_text = _row[0].strip()
+    except Exception:
+        pass
+    _rlines = [l for l in _resume_text.split('\n') if l.strip()]
+    applicant_name = _rlines[0].strip() if _rlines else 'the applicant'
+
+        company_line = f'at {company}' if company else 'for this role'
     role_line    = f'the {role} position' if role else 'this position'
 
-    prompt = f"""Write a professional cover letter for Jamie Loring applying {company_line}.
+    prompt = f"""Write a professional cover letter for {applicant_name} applying {company_line}.
 
-CANDIDATE BACKGROUND:
-Name: Jamie Loring
-Location: Glendale, AZ
-Phone: 623-297-8499
-Email: jamie@jamieloring.com
-Background: Senior Azure cloud security engineer, 8+ years. Microsoft Sentinel SIEM, Defender for Cloud, Entra ID, Azure Policy, CSPM. CompTIA SecurityX (CASP+) certified. DoD Public Trust clearance active.
-Recent roles: Cloud & Threat Security Engineer at Troon (2026), Azure Security Engineer at Arrivia (2025-2026), Azure SIEM Engineer at OPM (2023-2024), Sentinel Engineer at Microsoft/Insight Global (2021-2023).
+CANDIDATE RESUME:
+{_resume_text}
 
 JOB DESCRIPTION:
 {jd}
