@@ -223,27 +223,12 @@
     display: none; align-items: center; gap: 4px; margin-top: 6px;
   }
   .jd-saved-indicator.show { display: flex; }
+  .lane-indicator { display:none; align-items:center; gap:5px; font-size:11px; margin-top:4px; }
+  .lane-indicator.show { display:flex; }
+  .lane-ok   { color:#4ade80; }
+  .lane-warn { color:#fbbf24; }
+  .lane-indicator svg { flex-shrink:0; }
 
-  .score-widget {
-    margin-top: 8px; padding: 10px 12px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; display: none;
-  }
-  .score-widget.show { display: block; }
-  .score-num { font-size: 26px; font-weight: 700; line-height: 1; display: inline-block; }
-  .score-num.low  { color: #f87171; }
-  .score-num.mid  { color: #fbbf24; }
-  .score-num.high { color: #4ade80; }
-  .score-bar-track { height: 4px; background: var(--border); border-radius: 2px; margin: 6px 0 4px; }
-  .score-bar-fill { height: 4px; border-radius: 2px; transition: width 0.3s; }
-  .score-bar-fill.low  { background: #f87171; }
-  .score-bar-fill.mid  { background: #fbbf24; }
-  .score-bar-fill.high { background: #4ade80; }
-  .score-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-  .score-chip {
-    font-size: 10px; padding: 2px 6px; border-radius: 3px;
-    background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2);
-  }
   .sync-result { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 18px; }
   .sync-result.ok  { color: var(--green); }
   .sync-result.err { color: var(--red); }
@@ -529,18 +514,6 @@
         <div>
           <label for="jd-input">Job Description</label>
           <textarea id="jd-input" rows="14" placeholder="Paste the full job description here&hellip;"></textarea>
-          <div id="score-widget" class="score-widget">
-            <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
-              <span id="score-before" style="display:none;font-size:18px;font-weight:700;color:var(--muted)"></span>
-              <span id="score-arrow" style="display:none;font-size:13px;color:var(--muted)">→</span>
-              <span id="score-num" class="score-num low">—</span>
-              <span id="score-delta" style="display:none;font-size:12px;font-weight:700;align-self:center"></span>
-              <span style="font-size:12px;color:var(--muted)">/100 match</span>
-            </div>
-            <div class="score-bar-track"><div id="score-bar" class="score-bar-fill low" style="width:0%"></div></div>
-            <div id="score-summary" style="font-size:11px;color:var(--muted);margin-bottom:2px"></div>
-            <div id="score-chips" class="score-chips"></div>
-          </div>
         </div>
         <div>
           <label for="resume-input">Your Resume</label>
@@ -600,6 +573,7 @@
         <div>
           <label for="log-role">Role</label>
           <input type="text" id="log-role" placeholder="Cloud Security Engineer">
+          <div class="lane-indicator" id="lane-indicator"><svg id="lane-icon" width="11" height="11" viewBox="0 0 16 16" fill="currentColor"></svg><span id="lane-msg"></span></div>
         </div>
         <div>
           <label for="log-source">Source</label>
@@ -648,6 +622,11 @@
   </div>
 
   <div class="sidebar">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11px;line-height:1.7">
+      <div class="sidebar-title" style="margin-bottom:6px">Your Lane</div>
+      <div style="color:var(--green);margin-bottom:4px">✓ Senior Cloud / Azure Security Engineer<br>✓ Azure · Sentinel · Defender · Entra ID<br>✓ Fed contractor w/ Public Trust<br>✓ Security Architect (IC, not Big 4 mgr)</div>
+      <div style="color:#f87171">✗ SOC Analyst L1/L2/L3<br>✗ Red team · AppSec · SAST/DAST<br>✗ Systems / Infra / Network Engineer<br>✗ VP · Director · AVP · Associate level</div>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div class="sidebar-title" style="margin-bottom:0">Live Matches</div>
       <button id="refresh-jobs" onclick="loadJobs()">↻ refresh</button>
@@ -657,20 +636,23 @@
 
     <div class="sidebar-title" style="margin-top:10px">Search Strings</div>
 
-    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Microsoft%20Sentinel&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
-      <span class="sl-board">LinkedIn</span>Microsoft Sentinel — US Remote/Hybrid
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=%22Senior%20Cloud%20Security%20Engineer%22" target="_blank">
+      <span class="sl-board">LinkedIn</span>Senior Cloud Security Engineer — Remote
     </a>
-    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Azure%20Security%20Engineer&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
-      <span class="sl-board">LinkedIn</span>Azure Security Engineer — US Remote/Hybrid
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=%22Senior%20Security%20Engineer%22" target="_blank">
+      <span class="sl-board">LinkedIn</span>Senior Security Engineer — Remote
     </a>
-    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Cloud%20Security%20Engineer&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
-      <span class="sl-board">LinkedIn</span>Cloud Security Engineer — US Remote/Hybrid
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=%22Azure%20Security%20Engineer%22" target="_blank">
+      <span class="sl-board">LinkedIn</span>Azure Security Engineer — Remote
     </a>
-    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Defender%20for%20Cloud&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
-      <span class="sl-board">LinkedIn</span>Defender for Cloud — US Remote/Hybrid
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=%22Cloud%20Security%20Engineer%22" target="_blank">
+      <span class="sl-board">LinkedIn</span>Cloud Security Engineer — Remote
     </a>
-    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=Entra%20ID%20Security&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true" target="_blank">
-      <span class="sl-board">LinkedIn</span>Entra ID Security — US Remote/Hybrid
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=%22Senior%20Information%20Security%20Engineer%22" target="_blank">
+      <span class="sl-board">LinkedIn</span>Senior Information Security Engineer — Remote
+    </a>
+    <a class="search-link" href="https://www.linkedin.com/jobs/search/?f_WT=2%2C3&geoId=100219842&keywords=%22Security%20Architect%22" target="_blank">
+      <span class="sl-board">LinkedIn</span>Security Architect — Remote
     </a>
     <a class="search-link" href="https://www.indeed.com/jobs?q=%22Microsoft+Sentinel%22+%22Azure%22&l=Phoenix%2C+AZ&sc=0kf%3Aattr%28DSQF7%29%3B" target="_blank">
       <span class="sl-board">Indeed</span>Microsoft Sentinel Azure — Phoenix (Remote OK)
@@ -1051,78 +1033,10 @@ let _discoverJobs = [];
 
 document.getElementById('resume-input').value = RESUME;
 
-// JD score on input
-let _scoreTimer = null;
-let _beforeScore = null;
 document.getElementById('jd-input').addEventListener('input', function() {
   const indicator = document.getElementById('jd-saved-indicator');
   indicator.classList.toggle('show', this.value.trim().length > 0);
-  clearTimeout(_scoreTimer);
-  _beforeScore = null;
-  document.getElementById('score-before').style.display = 'none';
-  document.getElementById('score-arrow').style.display = 'none';
-  document.getElementById('score-delta').style.display = 'none';
-  _scoreTimer = setTimeout(updateScore, 600);
 });
-
-async function updateScore() {
-  const jd = document.getElementById('jd-input').value.trim();
-  const resume = document.getElementById('resume-input').value.trim();
-  const widget = document.getElementById('score-widget');
-  if (!jd || jd.length < 80) { widget.classList.remove('show'); _beforeScore = null; return; }
-  try {
-    const r = await fetch('/api/resume-score', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({jd, resume})
-    });
-    const d = await r.json();
-    const score = d.score || 0;
-    _beforeScore = score;
-    const tier = score >= 70 ? 'high' : score >= 50 ? 'mid' : 'low';
-    document.getElementById('score-num').textContent = score;
-    document.getElementById('score-num').className = `score-num ${tier}`;
-    document.getElementById('score-bar').style.width = score + '%';
-    document.getElementById('score-bar').className = `score-bar-fill ${tier}`;
-    const matched = d.matched || [], missing = d.missing || [];
-    document.getElementById('score-summary').textContent =
-      `${matched.length} keywords matched · ${d.missing_count || missing.length} missing`;
-    document.getElementById('score-chips').innerHTML =
-      missing.slice(0,8).map(t => `<span class="score-chip">${esc(t)}</span>`).join('');
-    widget.classList.add('show');
-  } catch(e) {}
-}
-
-async function updateScoreAfter(optimized, jd) {
-  if (_beforeScore === null) return;
-  try {
-    const r = await fetch('/api/resume-score', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({jd, resume: optimized})
-    });
-    const d = await r.json();
-    const after = d.score || 0;
-    const delta = after - _beforeScore;
-    const tier = after >= 70 ? 'high' : after >= 50 ? 'mid' : 'low';
-    const beforeEl = document.getElementById('score-before');
-    beforeEl.textContent = _beforeScore;
-    beforeEl.style.display = 'inline';
-    document.getElementById('score-arrow').style.display = 'inline';
-    document.getElementById('score-num').textContent = after;
-    document.getElementById('score-num').className = `score-num ${tier}`;
-    const deltaEl = document.getElementById('score-delta');
-    deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
-    deltaEl.style.color = delta >= 0 ? 'var(--green)' : '#f87171';
-    deltaEl.style.display = 'inline';
-    document.getElementById('score-bar').style.width = after + '%';
-    document.getElementById('score-bar').className = `score-bar-fill ${tier}`;
-    const matched = d.matched || [], missing = d.missing || [];
-    document.getElementById('score-summary').textContent =
-      `After optimize: ${matched.length} matched · ${d.missing_count || missing.length} still missing`;
-    document.getElementById('score-chips').innerHTML =
-      missing.slice(0,8).map(t => `<span class="score-chip">${esc(t)}</span>`).join('');
-    document.getElementById('score-widget').classList.add('show');
-  } catch(e) {}
-}
 
 async function checkStatus() {
   try {
@@ -1170,7 +1084,6 @@ async function runOptimize() {
       document.getElementById('tab-btn-resume').textContent =
         compName ? 'Optimized Resume — ' + compName : 'Optimized Resume';
       downloadDocx();
-      updateScoreAfter(optimizedText, jd);
     }
   } catch (e) {
     out.className = 'placeholder'; out.textContent = 'Network error: ' + e.message;
@@ -1211,6 +1124,31 @@ async function downloadDocx() {
   a.click(); URL.revokeObjectURL(url);
 }
 
+
+const LANE_IN  = [/cloud security/i,/azure security/i,/sentinel/i,/defender for cloud/i,/entra id/i,/security engineer/i,/security architect/i,/cloud.*security/i,/security.*cloud/i];
+const LANE_OUT = [/\bsoc\b.*analys/i,/soc.*l[123]/i,/red[- ]?team/i,/penetrat/i,/pentest/i,/\bappsec\b/i,/application security/i,/\bsast\b/i,/\bdast\b/i,/systems engineer/i,/infrastructure engineer/i,/network engineer/i,/\bvp\b/i,/\bavp\b/i,/\bdirector\b/i,/associate.*engineer/i,/associate.*analyst/i,/\bkernel\b/i,/data annot/i];
+function checkLane(role) {
+  const ind = document.getElementById('lane-indicator');
+  const msg = document.getElementById('lane-msg');
+  const ico = document.getElementById('lane-icon');
+  if (!role || role.length < 4) { ind.classList.remove('show'); return; }
+  const out = LANE_OUT.some(r => r.test(role));
+  const inn = LANE_IN.some(r => r.test(role));
+  if (out) {
+    ind.className = 'lane-indicator lane-warn show';
+    ico.innerHTML = '<path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4h1.5v5h-1.5V4zm0 6h1.5v1.5h-1.5V10z"/>';
+    msg.textContent = 'Outside your lane — worth a gut-check';
+  } else if (inn) {
+    ind.className = 'lane-indicator lane-ok show';
+    ico.innerHTML = '<path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>';
+    msg.textContent = 'On target';
+  } else {
+    ind.className = 'lane-indicator lane-warn show';
+    ico.innerHTML = '<path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4h1.5v5h-1.5V4zm0 6h1.5v1.5h-1.5V10z"/>';
+    msg.textContent = 'Unclear — does this fit the lane?';
+  }
+}
+document.getElementById('log-role').addEventListener('input', function() { checkLane(this.value.trim()); });
 async function logApplication() {
   const company = document.getElementById('log-company').value.trim();
   const role    = document.getElementById('log-role').value.trim();
@@ -1220,7 +1158,7 @@ async function logApplication() {
   if (!company || !role) { alert('Enter company and role.'); return; }
   const r = await fetch('/api/applications', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ company, role, ats, source, jd_text })
+    body: JSON.stringify({ company, role, ats, source, jd_text, resume_text: optimizedText })
   });
   if (r.ok) {
     document.getElementById('log-company').value = '';
@@ -1767,6 +1705,30 @@ async function refreshLeads() {
   }
 }
 
+async function scrapeLinkedIn() {
+  const btn = document.getElementById('li-scrape-btn');
+  const meta = document.getElementById('leads-run-meta');
+  btn.disabled = true;
+  btn.textContent = 'Scraping…';
+  meta.textContent = 'Scraping LinkedIn guest API…';
+  try {
+    const r = await fetch('/api/leads/scrape-linkedin', {method: 'POST'});
+    const d = await r.json();
+    if (d.error) {
+      meta.textContent = 'Error: ' + d.error;
+    } else {
+      meta.textContent = 'LinkedIn done — ' + d.added + ' added, ' + d.filtered + ' filtered';
+      loadLeads();
+    }
+  } catch(e) {
+    meta.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Scrape LinkedIn';
+  }
+}
+
+
 async function loadBlacklist() {
   try {
     const r = await fetch('/api/leads/blacklist');
@@ -1812,6 +1774,7 @@ async function removeBlacklist(company) {
       <div class="leads-header-meta" id="leads-run-meta">Loading&hellip;</div>
     </div>
     <button class="leads-refresh-btn" id="leads-refresh-btn" onclick="refreshLeads()">&#8635; Refresh now</button>
+    <button class="leads-refresh-btn" id="li-scrape-btn" onclick="scrapeLinkedIn()" style="background:#0a66c2;margin-left:8px">&#128269; Scrape LinkedIn</button>
   </div>
 
   <div class="leads-status-bar">

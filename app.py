@@ -1,4 +1,4 @@
-﻿import sqlite3, json, os, re, subprocess, imaplib, email, urllib.request, urllib.parse
+import sqlite3, json, os, re, subprocess, imaplib, email, urllib.request, urllib.parse
 import concurrent.futures
 from email.header import decode_header as email_decode_header
 from flask import Flask, jsonify, request, send_from_directory
@@ -17,8 +17,8 @@ CLAUDE_BIN = '/usr/local/bin/claude'
 TIER_MAP = {
     'BrassRing': 'legacy', 'iCIMS': 'legacy', 'SuccessFactors': 'legacy',
     'Taleo': 'legacy', 'UKG': 'legacy',
-    'BambooHR': 'standard', 'Jobvite': 'standard', 'Rippling': 'standard',
-    'SmartRecruiters': 'standard', 'Workable': 'standard', 'Workday': 'standard',
+    'BambooHR': 'standard', 'Jobvite': 'standard', 'Paylocity': 'standard', 'Rippling': 'standard',
+    'SmartRecruiters': 'standard', 'Workable': 'standard', 'Workday': 'standard', 'Oracle HCM': 'standard',
     'Greenhouse': 'modern', 'Lever': 'modern', 'Ashby': 'modern',
     'LinkedIn Easy Apply': 'easy_apply', 'Indeed Easy Apply': 'easy_apply',
     'Dice Easy Apply': 'easy_apply',
@@ -33,10 +33,151 @@ TIER_GUIDE = {
 }
 
 DEFAULT_RESUME = """YOUR NAME
-YOUR-PHONE | your@email.com | City, ST
+555-555-5555 | you@example.com | Your City, ST
 
-[No resume configured. Go to Settings and paste in your resume as plain text.]
-"""
+PROFESSIONAL SUMMARY
+Senior cybersecurity engineer with 8+ years of experience specializing in offensive security, vulnerability management, and cloud defense. Builds and operates penetration testing frameworks, performs external attack surface management (EASM), and translates findings into developer-ready remediation. Operates Microsoft Sentinel SIEM, Defender for Cloud, and Entra ID at enterprise scale. CompTIA SecurityX (CASP+) certified; DoD Public Trust clearance active.
+
+OFFENSIVE SECURITY & PROJECTS
+- ShellShock: custom Parrot OS-based pentesting framework for network enumeration, exploitation, and post-exploitation automation
+- EASM: built tooling for continuous external asset discovery, subdomain enumeration, and exposure tracking across client environments
+- HackTheBox: global top 1% ranking across Active Directory, web exploitation, privilege escalation, and red team challenges
+- LLM Automation: developed Python/Claude-based agents for automated security research, threat intelligence enrichment, and workflow automation
+- Python scripting: security tooling, API integrations, log parsing, and operational automation across multiple roles
+
+EXPERIENCE
+
+Cloud & Threat Security Engineer | Troon | Jun 2026 - Oct 2026
+- Designed and maintained Microsoft Sentinel SIEM with custom KQL detection rules, threat hunting playbooks, and automated incident response
+- Managed Defender for Cloud security posture, Entra ID identity protection, and Azure Policy / CSPM across enterprise environment
+- Developed Python automation for security operations workflows and LLM-assisted threat intelligence enrichment
+- Collaborated with developers via Azure DevOps to triage, prioritize, and track vulnerability remediation to closure
+- Developed Terraform modules for Azure Policy definitions and IaC security controls, integrating security guardrails into platform engineering workflows
+
+Azure Security Engineer | Arrivia | Jul 2025 - Jun 2026
+- Implemented Microsoft Sentinel log ingestion pipelines, analytics rules, and SOAR playbooks for cloud environment
+- Managed Entra ID conditional access policies, MFA enforcement, and identity security posture
+- Conducted threat hunting using KQL and MITRE ATT&CK framework; reduced false-positive alert volume through detection tuning
+- Performed internal vulnerability assessments and coordinated with engineering teams via GitHub for remediation tracking
+
+Azure SIEM Engineer | OPM | Jul 2023 - Jul 2024
+- Built and maintained Microsoft Sentinel SIEM for federal civilian environment under FISMA / NIST 800-53 requirements
+- Developed PowerShell and Microsoft Graph API automation for security operations and continuous monitoring reporting
+- Supported ATO documentation and security control assessments for cloud-hosted federal systems
+
+Sentinel Engineer | Microsoft Azure / Insight Global | Nov 2021 - Apr 2023
+- Deployed Microsoft Sentinel for enterprise clients; built custom KQL workbooks, alerts, and threat hunting queries
+- Integrated Defender for Cloud with Sentinel for unified threat detection and automated incident response workflows
+- Designed zero trust architecture and conditional access implementations for Azure AD environments
+- Performed external attack surface assessments to reduce client exposure prior to Sentinel onboarding
+
+Network Security Analyst | Avnet | Feb 2020 - Nov 2021
+- Managed Sophos endpoint security and Cisco Meraki network infrastructure across multi-site enterprise environment
+- Performed incident response, forensic triage, and security automation workflows using Python and PowerShell
+- Maintained IAM, RBAC policies, and vulnerability remediation tracking
+
+SKILLS
+Offensive Security: Penetration Testing | EASM | Vulnerability Management | Parrot OS / ShellShock | HackTheBox (Top 1%)
+Cloud Security: Microsoft Sentinel | Defender for Cloud | Entra ID / Azure AD | Azure Policy | CSPM | EASM
+SIEM / Detection: KQL | Log Ingestion Pipelines | MITRE ATT&CK | Threat Hunting | SOAR | Incident Response
+Identity & IAM: Conditional Access | MFA | SSO | RBAC | Microsoft Graph API
+Automation & Dev: Python | PowerShell | Bash | Terraform | Azure DevOps | GitHub | LLM Automation
+Compliance: FISMA | NIST 800-53 | FedRAMP | CMMC | Zero Trust Architecture
+Endpoint & Network: Sophos | Cisco Meraki | Forensic Triage
+
+CERTIFICATIONS
+CompTIA SecurityX ce (CASP+) - Mar 2026
+CompTIA Security+ - Apr 2024
+Microsoft Azure Fundamentals (AZ-900)
+DoD Public Trust Clearance (Active)
+
+EDUCATION
+B.S. Network Security & Administration | ITT Technical Institute | 2011-2014
+
+--- KEYWORD POOL (optimizer use only — not resume content) ---
+Draw from this pool when a JD uses these terms and they accurately reflect my background.
+Do not invent experience. Only surface terms I have genuine hands-on exposure to.
+
+SIEM / Detection Engineering:
+Microsoft Sentinel, Azure Sentinel, KQL, Kusto Query Language, Log Analytics, Data Collection Rules,
+DCR, Log Ingestion API, Custom Logs, Analytics Rules, Scheduled Query Rules, Fusion Rules,
+SOAR, Playbooks, Logic Apps, Azure Automation, Watchlists, Threat Intelligence, TI indicators,
+Workbooks, Dashboards, Hunting Queries, Notebooks, UEBA, Entity Analytics,
+Splunk (exposure), Elastic SIEM (exposure), QRadar (exposure)
+
+Cloud Security (Microsoft):
+Microsoft Defender for Cloud, Defender for Servers, Defender for Containers,
+Defender for Storage, Defender for SQL, Defender for Key Vault, Defender for DNS,
+Defender XDR, Microsoft 365 Defender, Defender for Endpoint (MDE), Defender for Identity (MDI),
+Defender for Office 365, Defender for Cloud Apps (MCAS), Azure Security Center,
+Secure Score, Security Posture Management, CSPM, CWPP,
+Entra ID, Azure Active Directory, Azure AD, Conditional Access, Identity Protection,
+Privileged Identity Management (PIM), Entitlement Management, Access Reviews,
+MFA, SSPR, B2B, B2C, Managed Identity, Service Principals, App Registrations,
+Azure Policy, Policy Initiatives, Blueprints, Management Groups, RBAC, Resource Locks,
+Azure Firewall, NSG, WAF, Application Gateway, Front Door, DDoS Protection,
+Azure Key Vault, Secrets Management, Certificate Management, Disk Encryption,
+Azure Monitor, Diagnostic Settings, Activity Log, Resource Graph,
+Microsoft Purview, DLP, Information Protection, Sensitivity Labels, Insider Risk Management,
+EASM, External Attack Surface Management, Defender EASM
+
+Cloud Security (Multi-cloud):
+AWS Security Hub, GuardDuty, CloudTrail, IAM (AWS), SCPs (exposure),
+GCP Security Command Center (exposure),
+Prisma Cloud (exposure), Wiz (exposure), Orca (exposure)
+
+Identity & Access Management:
+Zero Trust Architecture, Zero Trust Network Access (ZTNA),
+SSO, SAML, OAuth 2.0, OIDC, Federation,
+RBAC, ABAC, PAM, Privileged Access, Just-In-Time Access,
+Active Directory, Group Policy, On-premises AD, AD Connect, Hybrid Identity,
+CyberArk (exposure), BeyondTrust (exposure)
+
+Offensive Security / Pentesting:
+Penetration Testing, Network Penetration Testing, Web Application Penetration Testing,
+Internal Penetration Testing, External Penetration Testing,
+ShellShock (custom framework), Parrot OS, Kali Linux,
+Nmap, Nessus, Metasploit, Burp Suite, Gobuster, Nikto, Impacket,
+OSINT, Reconnaissance, Enumeration, Exploitation, Post-Exploitation, Lateral Movement,
+Privilege Escalation, Persistence, Active Directory Attacks, Kerberoasting, Pass-the-Hash,
+HackTheBox (Top 1% globally), TryHackMe,
+Red Team, Adversary Simulation, Purple Team, Assumed Breach
+
+Vulnerability Management:
+Vulnerability Assessment, Vulnerability Scanning, Risk Prioritization, CVSS,
+Remediation Tracking, Patch Management, Attack Surface Reduction,
+Tenable, Qualys (exposure), Rapid7 (exposure),
+EASM, External Exposure, Asset Discovery, Subdomain Enumeration
+
+Incident Response & Threat Hunting:
+Incident Response, IR Playbooks, Triage, Containment, Eradication, Recovery,
+Digital Forensics, Memory Forensics, Disk Forensics, Log Forensics,
+Threat Hunting, Hypothesis-Driven Hunting, MITRE ATT&CK, ATT&CK Navigator,
+Threat Intelligence, IOC, IOA, TTPs, Kill Chain, Diamond Model,
+DFIR, SOC Operations, Tier 1/2/3 Analysis, Escalation, Alert Triage
+
+Compliance & Governance:
+FISMA, NIST SP 800-53, NIST CSF, NIST 800-171,
+FedRAMP, ATO, System Security Plan (SSP), POA&M, Continuous Monitoring,
+CMMC, ITAR, DoD Public Trust Clearance,
+CIS Controls, CIS Benchmarks, DISA STIGs,
+SOC 2 (Type I/II awareness), ISO 27001 (awareness),
+HIPAA (awareness), PCI DSS (awareness),
+GRC, Risk Management, Security Policy, Audit Support
+
+Automation & Development:
+Python, PowerShell, Bash, KQL, Microsoft Graph API,
+REST APIs, JSON, Azure Logic Apps, Azure Functions,
+Git, GitHub, Azure DevOps, CI/CD awareness,
+LLM integration, AI-assisted security workflows, Prompt Engineering,
+Infrastructure as Code (IaC), Bicep (exposure), Terraform
+
+Networking & Endpoint:
+TCP/IP, DNS, DHCP, VPN, TLS/SSL, HTTP/S, SMTP,
+Firewall Management, Network Segmentation, VLAN, NAC,
+Cisco Meraki, Sophos, Endpoint Detection and Response (EDR),
+SASE (awareness), SD-WAN (awareness)
+--- END KEYWORD POOL ---"""
 
 STOP = {
     'the','and','for','with','that','this','have','from','will','are','not',
@@ -134,54 +275,6 @@ def score_for_discover(jd_text, resume_text):
     }
 
 
-def compute_score(jd, resume):
-    jd_l = jd.lower()
-    resume_l = resume.lower()
-    jd_tokens = re.findall(r'[a-z][a-z0-9+#.\-/]*[a-z0-9+#]|[a-z]{3,}', jd_l)
-    unigrams = [t for t in jd_tokens if len(t) >= 4 and t not in STOP]
-    bigrams = []
-    for clause in re.split(r'[,;.!?\n|/\\()\[\]]', jd_l):
-        ctoks = re.findall(r'[a-z][a-z0-9+#.\-/]*[a-z0-9+#]|[a-z]{3,}', clause)
-        for i in range(len(ctoks) - 1):
-            a, b = ctoks[i], ctoks[i+1]
-            if a not in STOP and b not in STOP and len(a) >= 3 and len(b) >= 3:
-                bigrams.append(f'{a} {b}')
-    freq = Counter(unigrams + bigrams)
-    covered = set()
-    terms = {}
-    for bg, cnt in freq.items():
-        if ' ' in bg:
-            parts = bg.split()
-            w = 3 if any(p in BOOST for p in parts) else 1.5
-            terms[bg] = w * min(cnt, 3)
-            covered.update(parts)
-    for ug, cnt in freq.items():
-        if ' ' not in ug and ug not in covered:
-            terms[ug] = (3 if ug in BOOST else 1) * min(cnt, 3)
-    if not terms:
-        return {'score': 0, 'matched': [], 'missing': []}
-    total_weight = sum(terms.values())
-    matched_weight = 0
-    matched = []
-    missing = []
-    for term, weight in terms.items():
-        if term in resume_l:
-            matched_weight += weight
-            matched.append((term, weight))
-        else:
-            missing.append((term, weight))
-    score = min(round(matched_weight / total_weight * 100), 100)
-    matched.sort(key=lambda x: -x[1])
-    missing.sort(key=lambda x: -x[1])
-    missing_chips = [t for t, _ in missing if any(w in BOOST for w in t.split())][:10]
-    return {
-        'score': score,
-        'matched': [t for t, _ in matched[:15]],
-        'missing': missing_chips,
-        'missing_count': len(missing),
-    }
-
-
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
@@ -199,7 +292,7 @@ def init_db():
             timestamp INTEGER,
             date_iso  TEXT
         )''')
-        for col, default in [('status', "'applied'"), ('notes', "''"), ('jd_text', "''")]:
+        for col, default in [('status', "'applied'"), ('notes', "''"), ('jd_text', "''"), ('resume_text', "''")]:
             try:
                 conn.execute(f'ALTER TABLE applications ADD COLUMN {col} TEXT DEFAULT {default}')
             except sqlite3.OperationalError:
@@ -558,6 +651,71 @@ def _fetch_usajobs(seen):
     return results
 
 
+
+LI_SEARCHES = [
+    ('microsoft sentinel cloud security engineer', 'United States', 'r604800', '2'),
+    ('azure security engineer sentinel kql',       'United States', 'r604800', '2'),
+    ('ai agent security engineer',                 'United States', 'r604800', '2'),
+    ('cloud security engineer siem detection',     'United States', 'r604800', '2'),
+    ('threat detection engineer azure',   'Phoenix, Arizona, United States', 'r604800', ''),
+    ('microsoft sentinel security engineer','Phoenix, Arizona, United States', 'r604800', ''),
+]
+
+_LI_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    ),
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+}
+
+
+def _fetch_linkedin_guest(seen=None):
+    if seen is None:
+        seen = set()
+    jobs = []
+    for keywords, location, tpr, workplace in LI_SEARCHES:
+        try:
+            params = {'keywords': keywords, 'location': location,
+                      'f_TPR': tpr, 'start': '0'}
+            if workplace:
+                params['f_WT'] = workplace
+            url = ('https://www.linkedin.com/jobs-guest/jobs/api/'
+                   'seeMoreJobPostings/search?' + urllib.parse.urlencode(params))
+            req = urllib.request.Request(url, headers=_LI_HEADERS)
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                if resp.getcode() == 429:
+                    continue
+                html = resp.read().decode('utf-8', errors='replace')
+        except Exception:
+            continue
+
+        ids       = re.findall(r'data-entity-urn="urn:li:jobPosting:(\d+)"', html)
+        titles    = re.findall(r'base-search-card__title[^"]*"[^>]*>\s*(.+?)\s*</', html)
+        companies = re.findall(
+            r'base-search-card__subtitle[^"]*"[^>]*>.*?<a[^>]*>\s*(.+?)\s*</a>',
+            html, re.DOTALL)
+        locations = re.findall(r'job-search-card__location[^"]*"[^>]*>\s*(.+?)\s*</', html)
+
+        for i, job_id in enumerate(ids):
+            lid = f'li-{job_id}'
+            if lid in seen:
+                continue
+            seen.add(lid)
+            jobs.append({
+                'id':       lid,
+                'title':    titles[i].strip()    if i < len(titles)    else '',
+                'company':  companies[i].strip() if i < len(companies) else '',
+                'location': locations[i].strip() if i < len(locations) else location,
+                'url':      f'https://www.linkedin.com/jobs/view/{job_id}',
+                'source':   'LinkedIn',
+                'salary':   '',
+                'posted':   '',
+            })
+    return jobs
+
+
 @app.route('/')
 def index():
     return send_from_directory('/app', 'index.html')
@@ -656,34 +814,26 @@ def cover_letter():
     if not jd:
         return jsonify({'error': 'jd is required'}), 400
 
-    # Pull applicant name from stored resume
-    _resume_text = ''
-    try:
-        import sqlite3 as _sq
-        with _sq.connect(DB) as _c:
-            _row = _c.execute("SELECT value FROM settings WHERE key='resume'").fetchone()
-            if _row and _row[0]:
-                _resume_text = _row[0].strip()
-    except Exception:
-        pass
-    _rlines = [l for l in _resume_text.split('\n') if l.strip()]
-    applicant_name = _rlines[0].strip() if _rlines else 'the applicant'
-
-        company_line = f'at {company}' if company else 'for this role'
+    company_line = f'at {company}' if company else 'for this role'
     role_line    = f'the {role} position' if role else 'this position'
 
-    prompt = f"""Write a professional cover letter for {applicant_name} applying {company_line}.
+    prompt = f"""Write a professional cover letter for {settings.get('first_name','')} {settings.get('last_name','')} applying {company_line}.
 
-CANDIDATE RESUME:
-{_resume_text}
+CANDIDATE BACKGROUND:
+Name: {settings.get('first_name','')} {settings.get('last_name','')}
+Location: {settings.get('city','')}
+Phone: {settings.get('phone','')}
+Email: {settings.get('email','')}
+Background: Senior Azure cloud security engineer, 8+ years. Microsoft Sentinel SIEM, Defender for Cloud, Entra ID, Azure Policy, CSPM. CompTIA SecurityX (CASP+) certified. DoD Public Trust clearance active.
+Recent roles: Cloud & Threat Security Engineer at Troon (2026), Azure Security Engineer at Arrivia (2025-2026), Azure SIEM Engineer at OPM (2023-2024), Sentinel Engineer at Microsoft/Insight Global (2021-2023).
 
 JOB DESCRIPTION:
 {jd}
 
 COVER LETTER RULES:
 1. Three paragraphs, 200-250 words total — tight and readable
-2. Opening: express genuine interest in {role_line} and name 1-2 specific things from the JD that match Jamie's background
-3. Middle: connect 2-3 concrete achievements from Jamie's experience directly to the JD's key requirements — be specific, not generic
+2. Opening: express genuine interest in {role_line} and name 1-2 specific things from the JD that match the candidate's background
+3. Middle: connect 2-3 concrete achievements from the candidate's experience directly to the JD's key requirements — be specific, not generic
 4. Closing: confident, not desperate — note availability and that you'd welcome a conversation
 5. Mirror the JD's exact terminology for key skills (same words the ATS will scan)
 6. Do NOT use hollow phrases like "I am excited to apply" or "I believe I would be a great fit"
@@ -712,7 +862,7 @@ COVER LETTER RULES:
 def get_applications():
     with get_db() as conn:
         rows = conn.execute(
-            'SELECT id,company,role,ats,source,timestamp,date_iso,status,notes,jd_text FROM applications ORDER BY timestamp DESC LIMIT 500'
+            'SELECT id,company,role,ats,source,timestamp,date_iso,status,notes,jd_text,resume_text FROM applications ORDER BY timestamp DESC LIMIT 500'
         ).fetchall()
     return jsonify([dict(r) for r in rows])
 
@@ -720,15 +870,19 @@ def get_applications():
 @app.route('/api/applications', methods=['POST'])
 def add_application():
     data = request.json or {}
+    required = ['company', 'role', 'ats', 'source']
+    missing = [f for f in required if not data.get(f, '').strip()]
+    if missing:
+        return jsonify({'error': f'Missing required fields: {missing}'}), 400
     ts = int(datetime.now(timezone.utc).timestamp() * 1000)
     row_id = str(ts)
     with get_db() as conn:
         conn.execute(
-            'INSERT INTO applications (id,company,role,ats,source,timestamp,date_iso,status,notes,jd_text) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            'INSERT INTO applications (id,company,role,ats,source,timestamp,date_iso,status,notes,jd_text,resume_text) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
             (row_id, data.get('company', ''), data.get('role', ''),
              data.get('ats', ''), data.get('source', ''),
              ts, datetime.now(timezone.utc).isoformat(),
-             'applied', '', data.get('jd_text', ''))
+             'applied', '', data.get('jd_text', ''), data.get('resume_text', ''))
         )
         conn.commit()
     return jsonify({'id': row_id}), 201
@@ -945,15 +1099,6 @@ def job_search():
     return jsonify({'jobs': results[:15]})
 
 
-@app.route('/api/resume-score', methods=['POST'])
-def resume_score():
-    data = request.get_json(force=True, silent=True) or {}
-    jd = data.get('jd', '').strip()
-    resume = data.get('resume', '').strip()
-    if not jd or not resume:
-        return jsonify({'score': 0, 'matched': [], 'missing': []})
-    return jsonify(compute_score(jd, resume))
-
 
 @app.route('/api/resume', methods=['GET', 'POST'])
 def resume_api():
@@ -1110,6 +1255,52 @@ SKIP_TITLE_RE = re.compile(
     re.IGNORECASE
 )
 
+
+# Titles too junior / wrong domain — skipped before Claude scoring call
+PRE_SCORE_SKIP_RE = re.compile(
+    r'\b('
+    r'security officer|security guard|'
+    r'(?:soc|security operations|information security|it security|infosec)\s+analyst|'
+    r'security analyst\s+(?:i{1,3}|level\s+[123]|l[123])|'
+    r'(?:i{1,3}|level\s+[123]|l[123])\s+security analyst|'
+    r'(?:application security|appsec)\b(?!\s+architect)|'
+    r'product security engineer|'
+    r'data protection\s+(?:engineer|analyst)|'
+    r'noc\s+(?:engineer|analyst)'
+    r')\b',
+    re.IGNORECASE,
+)
+
+# Consulting firms where "Consultant/Manager/Director" roles = billable travel work
+CONSULTING_FIRMS = {
+    'deloitte', 'pwc', 'pricewaterhousecoopers', 'ernst & young', 'ey', 'kpmg',
+    'accenture', 'cgi', 'cognizant', 'infosys', 'wipro', 'tata consultancy services',
+}
+
+CONSULTING_TITLE_RE = re.compile(
+    r'\b(consultant|managing consultant|associate consultant|advisory)\b',
+    re.IGNORECASE,
+)
+
+SALARY_FLOOR = 130_000
+
+# Clearance requirements above Public Trust — user holds Public Trust only
+CLEARANCE_SKIP_RE = re.compile(
+    r'\b('
+    r'ts[/\-]sci|top\s+secret|secret\s+clearance|'
+    r'polygraph|poly\s+clearance|'
+    r'dod\s+(?:secret|clearance)|'
+    r'active\s+(?:secret|clearance|ts)|'
+    r'(?:secret|ts|sci)\s+cleared|'
+    r'must\s+(?:hold|have|obtain)\s+(?:secret|ts|clearance)|'
+    r'clearance\s+required|require[sd]\s+clearance|'
+    r'clearable'
+    r')\b',
+    re.IGNORECASE,
+)
+
+
+
 LEAD_SENDERS = [
     'jobalerts-noreply@linkedin.com',
     'jobalert@linkedin.com',
@@ -1120,6 +1311,8 @@ LEAD_SENDERS = [
     'noreply@clearancejobs.com',
     'jobs@clearancejobs.com',
     'noreply@builtin.com',
+    'alerts@ziprecruiter.com',
+    'jobalert@glassdoor.com',
 ]
 
 
@@ -1199,8 +1392,14 @@ def parse_linkedin_alert(body):
         if not job_id_m:
             continue
         job_id = job_id_m.group(1)
+        _li_noise = re.compile(
+            r'^(\d+\s+(?:connection|company\s+alum|school\s+alum)|'
+            r'this\s+company\s+is|apply\s+with|be\s+a\s+verified|easy\s+apply|'
+            r"you.ll\s+receive\s+notifications|manage\s+job\s+alert)",
+            re.IGNORECASE)
         preceding = [l for l in lines[:url_idx]
-                     if l and not l.startswith('http') and len(l) > 2]
+                     if l and not l.startswith('http') and len(l) > 2
+                     and not _li_noise.match(l)]
         if len(preceding) < 2:
             continue
         location = preceding[-1] if len(preceding) >= 3 else ''
@@ -1266,6 +1465,42 @@ def parse_generic_alert(body, source):
             'posted': '',
         })
     return jobs
+
+
+
+def _extract_min_salary(salary_str):
+    nums = re.findall(r'[\d]+', salary_str.replace(',', ''))
+    vals = []
+    for n in nums:
+        v = int(n)
+        if v < 1000:
+            v *= 1000
+        if 30_000 <= v <= 1_000_000:
+            vals.append(v)
+    return min(vals) if vals else None
+
+
+def pre_score_filter(job):
+    title   = job.get('title', '')
+    company = normalize_company(job.get('company', ''))
+    salary  = job.get('salary', '')
+
+    # Title-only clearance check — avoids false positives from gov contractor boilerplate
+    if CLEARANCE_SKIP_RE.search(title):
+        return False, 'clearance above Public Trust'
+
+    if PRE_SCORE_SKIP_RE.search(title):
+        return False, 'title pattern skip'
+
+    if company in CONSULTING_FIRMS and CONSULTING_TITLE_RE.search(title):
+        return False, 'consulting role at consulting firm'
+
+    if salary:
+        min_sal = _extract_min_salary(salary)
+        if min_sal is not None and min_sal < SALARY_FLOOR:
+            return False, f'salary {salary} below floor'
+
+    return True, ''
 
 
 def filter_lead(job, blacklist, existing_ids, applied_companies):
@@ -1430,6 +1665,10 @@ def refresh_leads():
                 jobs = parse_generic_alert(body, 'ClearanceJobs')
             elif 'builtin' in sender_addr:
                 jobs = parse_generic_alert(body, 'BuiltIn')
+            elif 'ziprecruiter' in sender_addr:
+                jobs = parse_generic_alert(body, 'ZipRecruiter')
+            elif 'glassdoor' in sender_addr:
+                jobs = parse_generic_alert(body, 'Glassdoor')
             else:
                 jobs = parse_generic_alert(body, 'Email')
             for j in jobs:
@@ -1439,23 +1678,22 @@ def refresh_leads():
         except Exception as ex:
             errors.append(str(ex))
 
-    # ── Archive processed lead emails from INBOX ──────────────────────────
+    # ── Mark processed lead emails read + remove Job Leads label ──────────────────────────
     try:
-        mail.select('INBOX')
-        all_inbox_nums = []
+        mail.select('"Job Leads"')
+        all_label_nums = []
         for _sender in LEAD_SENDERS:
             _crit = 'FROM "' + _sender + '" SINCE ' + since
             _, _d = mail.search(None, _crit)
             _nums = _d[0].split() if _d[0] else []
-            all_inbox_nums.extend(
+            all_label_nums.extend(
                 _n.decode() if isinstance(_n, bytes) else _n
                 for _n in _nums
             )
-        for _n in all_inbox_nums:
+        for _n in all_label_nums:
             mail.store(_n, '+FLAGS', '(\\Seen)')
-            mail.copy(_n, '"' + '[Gmail]/All Mail' + '"')
             mail.store(_n, '+FLAGS', '(\\Deleted)')
-        if all_inbox_nums:
+        if all_label_nums:
             mail.expunge()
     except Exception as _ae:
         errors.append('archive: ' + str(_ae))
@@ -1471,11 +1709,15 @@ def refresh_leads():
     kept, filtered_count = [], 0
     for job in raw_jobs:
         keep, _ = filter_lead(job, blacklist, existing_ids, applied_companies)
-        if keep:
-            kept.append(job)
-            existing_ids.add(job['id'])
-        else:
+        if not keep:
             filtered_count += 1
+            continue
+        keep2, _ = pre_score_filter(job)
+        if not keep2:
+            filtered_count += 1
+            continue
+        kept.append(job)
+        existing_ids.add(job['id'])
 
     kept = score_leads_batch(kept)
 
@@ -1564,6 +1806,221 @@ def remove_blacklist(company):
                      (normalize_company(company),))
         conn.commit()
     return jsonify({'ok': True})
+
+
+@app.route('/api/leads/scrape-linkedin', methods=['POST'])
+def scrape_linkedin_leads():
+    import datetime as dt
+    raw_jobs = _fetch_linkedin_guest()
+
+    with get_db() as conn:
+        blacklist = {r[0] for r in conn.execute('SELECT company FROM lead_blacklist').fetchall()}
+        existing_ids = {r[0] for r in conn.execute('SELECT id FROM leads').fetchall()}
+        apps = conn.execute('SELECT company, role FROM applications').fetchall()
+        applied_companies = {normalize_company(r[0]): r[1] for r in apps}
+
+    kept, filtered_count = [], 0
+    for job in raw_jobs:
+        keep, _ = filter_lead(job, blacklist, existing_ids, applied_companies)
+        if not keep:
+            filtered_count += 1
+            continue
+        keep2, _ = pre_score_filter(job)
+        if not keep2:
+            filtered_count += 1
+            continue
+        kept.append(job)
+        existing_ids.add(job['id'])
+
+    kept = score_leads_batch(kept)
+
+    now_iso = dt.datetime.now(dt.timezone.utc).isoformat()
+    with get_db() as conn:
+        for j in kept:
+            conn.execute(
+                'INSERT OR IGNORE INTO leads '
+                '(id,title,company,location,workplace,source,url,posted,'
+                'found_at,score,reason,salary,status,email_message_id) '
+                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (j['id'], j.get('title',''), j.get('company',''),
+                 j.get('location',''), j.get('workplace','remote'),
+                 j.get('source',''), j.get('url',''), j.get('posted',''),
+                 now_iso, j.get('score',0), j.get('reason',''),
+                 j.get('salary',''), 'new', '')
+            )
+        conn.execute(
+            'INSERT INTO lead_runs (run_at, added, filtered, errors) VALUES (?,?,?,?)',
+            (now_iso, len(kept), filtered_count, 0))
+        conn.commit()
+
+    return jsonify({'added': len(kept), 'filtered': filtered_count})
+
+
+
+
+@app.route('/api/leads/discover-all', methods=['POST'])
+def discover_all_leads():
+    import datetime as dt
+    seen = set()
+    fetchers = [
+        lambda: _fetch_adzuna(seen),
+        lambda: _fetch_remotive(seen),
+        lambda: _fetch_jobicy(seen),
+        lambda: _fetch_the_muse(seen),
+        lambda: _fetch_arbeitnow(seen),
+        lambda: _fetch_usajobs(seen),
+        lambda: _fetch_linkedin_guest(seen),
+    ]
+    raw_jobs = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
+        futures = [executor.submit(f) for f in fetchers]
+        for future in concurrent.futures.as_completed(futures, timeout=45):
+            try:
+                raw_jobs.extend(future.result())
+            except Exception:
+                continue
+
+    with get_db() as conn:
+        blacklist     = {r[0] for r in conn.execute('SELECT company FROM lead_blacklist').fetchall()}
+        existing_ids  = {r[0] for r in conn.execute('SELECT id FROM leads').fetchall()}
+        apps          = conn.execute('SELECT company, role FROM applications').fetchall()
+        applied_companies = {normalize_company(r[0]): r[1] for r in apps}
+
+    kept, filtered_count = [], 0
+    for job in raw_jobs:
+        keep, _ = filter_lead(job, blacklist, existing_ids, applied_companies)
+        if not keep:
+            filtered_count += 1
+            continue
+        keep2, _ = pre_score_filter(job)
+        if not keep2:
+            filtered_count += 1
+            continue
+        kept.append(job)
+        existing_ids.add(job['id'])
+
+    kept = score_leads_batch(kept)
+
+    now_iso = dt.datetime.now(dt.timezone.utc).isoformat()
+    with get_db() as conn:
+        for j in kept:
+            conn.execute(
+                'INSERT OR IGNORE INTO leads '
+                '(id,title,company,location,workplace,source,url,posted,'
+                'found_at,score,reason,salary,status,email_message_id) '
+                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (j['id'], j.get('title',''), j.get('company',''),
+                 j.get('location',''), j.get('workplace','remote'),
+                 j.get('source',''), j.get('url',''), j.get('posted',''),
+                 now_iso, j.get('score',0), j.get('reason',''),
+                 j.get('salary',''), 'new', '')
+            )
+        conn.execute(
+            'INSERT INTO lead_runs (run_at, added, filtered, errors) VALUES (?,?,?,?)',
+            (now_iso, len(kept), filtered_count, 0))
+        conn.commit()
+
+    by_source = {}
+    for j in kept:
+        s = j.get('source','?')
+        by_source[s] = by_source.get(s, 0) + 1
+
+    return jsonify({'added': len(kept), 'filtered': filtered_count, 'by_source': by_source})
+
+
+@app.route('/api/leads/<lead_id>/apply/greenhouse', methods=['POST'])
+def apply_lead_greenhouse(lead_id):
+    """
+    Trigger Playwright to apply via Greenhouse ATS.
+    POST body (optional): { "questions": [...], "eeo": {...} }
+    The script derives company slug and token from the lead URL.
+    """
+    import datetime as dt
+    import urllib.request, urllib.error, json as _json
+    data = request.get_json(force=True, silent=True) or {}
+
+    with get_db() as conn:
+        lead = conn.execute('SELECT * FROM leads WHERE id=?', (lead_id,)).fetchone()
+    if not lead:
+        return jsonify({'error': 'lead not found'}), 404
+    lead = dict(lead)
+
+    # Extract greenhouse company slug and token from URL
+    # e.g. https://boards.greenhouse.io/ensono/jobs/4710413005
+    url = lead.get('url', '')
+    import re as _re
+    # Allow caller to pass for/token directly in body (overrides URL detection)
+    gh_for = data.get('for')
+    gh_token = data.get('token')
+    if not gh_for or not gh_token:
+        m = _re.search(r'greenhouse\.io/([^/]+)/jobs/(\d+)', url)
+        if not m:
+            return jsonify({'error': 'URL is not a Greenhouse job URL; pass "for" and "token" in body', 'url': url}), 400
+        gh_for = m.group(1)
+        gh_token = m.group(2)
+
+    # Read applicant info from settings
+    with get_db() as conn:
+        settings = {r['key']: r['value'] for r in conn.execute('SELECT key, value FROM settings').fetchall()}
+
+    cfg = {
+        'ats': 'greenhouse',
+        'for': gh_for,
+        'token': gh_token,
+        'resume_path': settings.get('resume_path', '/data/resume.docx'),
+        'applicant': {
+            'first_name': settings.get('first_name', ''),
+            'last_name':  settings.get('last_name', 'Loring'),
+            'email':      settings.get('email', 'jamie@jamieloring.com'),
+            'phone':      settings.get('phone', '6232978499'),
+            'city':       settings.get('city', 'Glendale, AZ'),
+            'linkedin':   settings.get('linkedin', 'https://www.linkedin.com/in/jamieloring'),
+        },
+        'questions': data.get('questions', []),
+        'eeo': data.get('eeo', {
+            'gender': 'Male',
+            'hispanic': False,
+            'race': 'White',
+            'veteran': 'I am not a protected veteran',
+        }),
+    }
+
+    # Call the apply agent
+    try:
+        req = urllib.request.Request(
+            'http://172.18.0.1:2346/apply',
+            data=_json.dumps(cfg).encode(),
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            result = _json.loads(resp.read())
+    except urllib.error.URLError as e:
+        return jsonify({'error': f'apply_agent unreachable: {e}'}), 503
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    if result.get('success'):
+        now_iso = dt.datetime.now(dt.timezone.utc).isoformat()
+        with get_db() as conn:
+            conn.execute('UPDATE leads SET status=?, status_changed_at=? WHERE id=?',
+                         ('applied', now_iso, lead_id))
+            # Also create application record
+            app_id = str(int(dt.datetime.now().timestamp() * 1000))
+            conn.execute(
+                'INSERT OR IGNORE INTO applications '
+                '(id,company,role,ats,source,timestamp,date_iso,status,notes,jd_text) '
+                'VALUES (?,?,?,?,?,?,?,?,?,?)',
+                (app_id, lead['company'], lead['title'], 'greenhouse',
+                 lead.get('source', ''),
+                 int(dt.datetime.now().timestamp() * 1000),
+                 dt.datetime.now().date().isoformat(),
+                 'applied', '', lead.get('url', ''))
+            )
+            conn.commit()
+
+    return jsonify(result)
+
 
 if __name__ == '__main__':
     os.makedirs('/data', exist_ok=True)

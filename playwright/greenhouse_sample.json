@@ -1,0 +1,26 @@
+{
+  "for": "COMPANY_SLUG",
+  "token": "JOB_TOKEN",
+  "resume_path": "/data/resume.docx",
+  "screenshot_before_submit": "/tmp/gh_preflight.png",
+  "applicant": {
+    "first_name": "YOUR_FIRST",
+    "last_name": "YOUR_LAST",
+    "email": "you@example.com",
+    "phone": "5555555555",
+    "city": "Your City, ST",
+    "linkedin": "https://www.linkedin.com/in/yourprofile"
+  },
+  "questions": [
+    { "label": "LinkedIn Profile", "value": "https://www.linkedin.com/in/yourprofile", "type": "text" },
+    { "label": "How did you hear about this job", "value": "Internet/Online Job Board", "type": "text" },
+    { "label": "require sponsorship", "value": "No", "type": "dropdown" },
+    { "label": "comfortable receiving text messages", "value": "Yes", "type": "dropdown" }
+  ],
+  "eeo": {
+    "gender": "Male",
+    "hispanic": false,
+    "race": "White",
+    "veteran": "I am not a protected veteran"
+  }
+}
